@@ -9,6 +9,10 @@ import 'package:thumbnail_maker/src/providers/canvas_provider.dart';
 import 'package:thumbnail_maker/src/models/element_model.dart';
 import 'package:thumbnail_maker/src/widgets/toolbars/left_toolbar.dart';
 import 'package:thumbnail_maker/src/widgets/toolbars/right_toolbar.dart';
+import 'package:thumbnail_maker/src/widgets/toolbars/bottom_properties_toolbar.dart'; // Added import
+import 'dart:math' as math;
+
+enum ResizeHandleType { topLeft, topRight, bottomLeft, bottomRight }
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -20,6 +24,9 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final TransformationController _transformationController = TransformationController();
   final GlobalKey _canvasKey = GlobalKey();
+
+  CanvasElement? _initialDragElement;
+  ResizeHandleType? _currentHandleType;
 
   @override
   void initState() {
@@ -124,20 +131,43 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildElementWidget(CanvasElement element, CanvasProvider provider, double currentCanvasZoom) {
     Widget content;
     BoxDecoration? shapeDecoration;
+    final double handleSize = 10.0; // Defined handle size
 
     if (element is ImageElement) {
-      content = Image.file(
+      Widget imageWidget = Image.file(
         File(element.imagePath),
         width: element.size.width,
         height: element.size.height,
         fit: BoxFit.contain,
         errorBuilder: (context, error, stackTrace) {
           return Container(
+            width: element.size.width, // Ensure error container also respects size for clipping
+            height: element.size.height,
             color: Colors.red[100], alignment: Alignment.center, padding: const EdgeInsets.all(4),
             child: Text('Error: ${element.imagePath.split('/').last}', textAlign: TextAlign.center, style: const TextStyle(fontSize: 10, color: Colors.red)),
           );
         },
       );
+
+      if (element.cornerRadius > 0) {
+        content = ClipRRect(
+          borderRadius: BorderRadius.circular(element.cornerRadius),
+          child: imageWidget,
+        );
+      } else {
+        content = imageWidget;
+      }
+
+      // Apply border if specified
+      if (element.borderWidth > 0 && element.borderColor != null) {
+        content = Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: element.borderColor!, width: element.borderWidth),
+            borderRadius: element.cornerRadius > 0 ? BorderRadius.circular(element.cornerRadius) : null,
+          ),
+          child: content, // content is already the (potentially clipped) imageWidget
+        );
+      }
     } else if (element is TextElement) {
       Widget fillText = Text(element.text, style: element.style, textAlign: element.textAlign);
       Widget? textContentWidget;
@@ -182,6 +212,9 @@ class _HomeScreenState extends State<HomeScreen> {
         color: element.color,
         border: (element.outlineColor != null && element.outlineWidth > 0)
             ? Border.all(color: element.outlineColor!, width: element.outlineWidth)
+            : null,
+        borderRadius: element.cornerRadius > 0
+            ? BorderRadius.circular(element.cornerRadius)
             : null,
       );
       content = SizedBox(width: element.size.width, height: element.size.height);
@@ -235,13 +268,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 ..rotateZ(element.rotation)
                 ..scale(element.scale)
                 ..translate(-element.size.width / 2, -element.size.height / 2),
-              child: Container(
-                width: element.size.width,
-                height: element.size.height,
-                decoration: shapeDecoration, // Used for shapes
-                // For non-shape elements, selection border is applied here if not locked
-                // For shapes, their own decoration includes fill and outline. Selection border is handled below.
-                child: (element is ImageElement || element is TextElement) ? content : null,
+              child: Opacity( // Apply opacity here, around the actual content
+                opacity: element.opacity,
+                child: Container(
+                  width: element.size.width,
+                  height: element.size.height,
+                  decoration: _buildElementDecoration(element, shapeDecoration), // Updated to use a helper for decoration
+                  child: (element is ImageElement || element is TextElement) ? content : null,
+                ),
               ),
             ),
             if (element.isLocked)
@@ -278,12 +312,203 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
+            // Resize handles
+            if (provider.selectedElement?.id == element.id && !element.isLocked)
+              ..._buildResizeHandles(element, currentCanvasZoom, handleSize, provider),
           ],
         ),
       ),
     );
   }
 
+  BoxDecoration _buildElementDecoration(CanvasElement element, BoxDecoration? existingShapeDecoration) {
+    List<BoxShadow>? currentBoxShadows;
+    if (element.shadowColor != null && element.shadowBlurRadius >= 0.0 && element.shadowColor!.alpha > 0) {
+      // Apply element's base opacity to shadow's color opacity
+      // Shadow color's own alpha is already part of element.shadowColor.alpha
+      // Element's overall opacity is handled by the Opacity widget wrapper.
+      // So, use element.shadowColor directly.
+      currentBoxShadows = [
+        BoxShadow(
+          color: element.shadowColor!,
+          blurRadius: element.shadowBlurRadius,
+          offset: element.shadowOffset ?? const Offset(2, 2), // Default offset if null
+        ),
+      ];
+    }
+
+    BorderRadius? decorationBorderRadius;
+    BoxShape shape = BoxShape.rectangle;
+
+    if (element is ImageElement && element.cornerRadius > 0) {
+      decorationBorderRadius = BorderRadius.circular(element.cornerRadius);
+    } else if (element is RectangleElement && element.cornerRadius > 0) {
+      decorationBorderRadius = BorderRadius.circular(element.cornerRadius);
+    } else if (element is CircleElement) {
+      shape = BoxShape.circle; // Circle shape for shadow and main decoration
+    }
+
+    if (existingShapeDecoration != null) {
+      // For shape elements, merge with their existing decoration
+      return existingShapeDecoration.copyWith(
+        boxShadow: currentBoxShadows,
+        // Ensure shape and borderRadius are consistent if they were already set
+        shape: (element is CircleElement) ? BoxShape.circle : existingShapeDecoration.shape,
+        borderRadius: (element is! CircleElement) ? (decorationBorderRadius ?? existingShapeDecoration.borderRadius) : null,
+      );
+    } else {
+      // For ImageElement and TextElement (which don't have existingShapeDecoration from this function's input)
+      return BoxDecoration(
+        shape: shape, // Will be rectangle unless it's a CircleElement (which is not the case here)
+        borderRadius: decorationBorderRadius,
+        boxShadow: currentBoxShadows,
+        // color: element is TextElement && element.textBackgroundColor != null ? element.textBackgroundColor : null, // Background color for text elements is handled by their 'content'
+      );
+    }
+  }
+
+  List<Widget> _buildResizeHandles(CanvasElement element, double currentCanvasZoom, double baseHandleSize, CanvasProvider provider) {
+    final double visualHandleSize = baseHandleSize / (element.scale * currentCanvasZoom);
+    final double handleOffset = -visualHandleSize / 2;
+
+    // Helper to create a handle widget
+    Widget _createHandle({
+      required ResizeHandleType handleType,
+      // required Alignment alignment, // Alignment can be inferred from handleType if needed or passed
+    }) {
+      // Determine alignment based on handleType for positioning
+      Alignment alignment;
+      switch (handleType) {
+        case ResizeHandleType.topLeft:
+          alignment = Alignment.topLeft;
+          break;
+        case ResizeHandleType.topRight:
+          alignment = Alignment.topRight;
+          break;
+        case ResizeHandleType.bottomLeft:
+          alignment = Alignment.bottomLeft;
+          break;
+        case ResizeHandleType.bottomRight:
+          alignment = Alignment.bottomRight;
+          break;
+      }
+
+      return Positioned(
+        left: alignment.x == -1 ? handleOffset : null,
+        top: alignment.y == -1 ? handleOffset : null,
+        right: alignment.x == 1 ? handleOffset : null,
+        bottom: alignment.y == 1 ? handleOffset : null,
+        child: GestureDetector(
+          onPanStart: (details) {
+            if (element.isLocked) return;
+            setState(() {
+              _initialDragElement = element.copyWith();
+              _currentHandleType = handleType;
+            });
+            provider.onElementGestureStart(element); // For undo state
+          },
+          onPanUpdate: (details) {
+            if (_initialDragElement == null || _currentHandleType == null || element.isLocked) return;
+
+            final initialElement = _initialDragElement!;
+            Offset canvasDelta = details.delta / currentCanvasZoom;
+
+            // Rotate canvasDelta by -initialElement.rotation to get localDelta
+            Offset localDelta = Offset(
+              canvasDelta.dx * math.cos(-initialElement.rotation) - canvasDelta.dy * math.sin(-initialElement.rotation),
+              canvasDelta.dx * math.sin(-initialElement.rotation) + canvasDelta.dy * math.cos(-initialElement.rotation),
+            );
+
+            Size newSize = initialElement.size;
+            Offset newPosition = initialElement.position;
+
+            double minSize = 10.0;
+
+            switch (_currentHandleType!) {
+              case ResizeHandleType.topLeft:
+                double newWidth = initialElement.size.width - localDelta.dx;
+                double newHeight = initialElement.size.height - localDelta.dy;
+                if (newWidth < minSize) { localDelta = Offset(initialElement.size.width - minSize, localDelta.dy); newWidth = minSize; }
+                if (newHeight < minSize) { localDelta = Offset(localDelta.dx, initialElement.size.height - minSize); newHeight = minSize; }
+
+                newSize = Size(newWidth, newHeight);
+                // Calculate the world-space displacement of the top-left corner
+                Offset positionDelta = Offset(
+                  localDelta.dx * math.cos(initialElement.rotation) - localDelta.dy * math.sin(initialElement.rotation),
+                  localDelta.dx * math.sin(initialElement.rotation) + localDelta.dy * math.cos(initialElement.rotation),
+                );
+                newPosition = initialElement.position + positionDelta;
+                break;
+              case ResizeHandleType.topRight:
+                double newWidth = initialElement.size.width + localDelta.dx;
+                double newHeight = initialElement.size.height - localDelta.dy;
+                if (newWidth < minSize) { localDelta = Offset(-(initialElement.size.width - minSize), localDelta.dy); newWidth = minSize; }
+                if (newHeight < minSize) { localDelta = Offset(localDelta.dx, initialElement.size.height - minSize); newHeight = minSize; }
+
+                newSize = Size(newWidth, newHeight);
+                // Calculate the world-space displacement of the top-left corner (effectively, only Y changes due to height reduction from top)
+                 Offset positionDelta = Offset(
+                  -localDelta.dy * math.sin(initialElement.rotation), // dx component from dy change
+                  localDelta.dy * math.cos(initialElement.rotation),   // dy component from dy change
+                );
+                newPosition = initialElement.position + positionDelta;
+                break;
+              case ResizeHandleType.bottomLeft:
+                double newWidth = initialElement.size.width - localDelta.dx;
+                double newHeight = initialElement.size.height + localDelta.dy;
+                if (newWidth < minSize) { localDelta = Offset(initialElement.size.width - minSize, localDelta.dy); newWidth = minSize; }
+                if (newHeight < minSize) { localDelta = Offset(localDelta.dx, -(initialElement.size.height - minSize)); newHeight = minSize; }
+
+                newSize = Size(newWidth, newHeight);
+                // Calculate the world-space displacement of the top-left corner (effectively, only X changes due to width reduction from left)
+                Offset positionDelta = Offset(
+                  localDelta.dx * math.cos(initialElement.rotation), // dx component from dx change
+                  localDelta.dx * math.sin(initialElement.rotation),  // dy component from dx change
+                );
+                newPosition = initialElement.position + positionDelta;
+                break;
+              case ResizeHandleType.bottomRight:
+                double newWidth = initialElement.size.width + localDelta.dx;
+                double newHeight = initialElement.size.height + localDelta.dy;
+                if (newWidth < minSize) newWidth = minSize;
+                if (newHeight < minSize) newHeight = minSize;
+                newSize = Size(newWidth, newHeight);
+                // Position does not change when dragging bottom-right
+                break;
+            }
+            provider.updateSelectedElementSizeAndPosition(newPosition, newSize);
+          },
+          onPanEnd: (details) {
+            if (element.isLocked) return;
+            provider.onElementGestureEnd();
+            setState(() {
+              _initialDragElement = null;
+              _currentHandleType = null;
+            });
+          },
+          child: Container(
+            width: visualHandleSize,
+            height: visualHandleSize,
+            decoration: BoxDecoration(
+              color: Colors.blueAccent,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: Colors.white,
+                width: 0.5 / (element.scale * currentCanvasZoom),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return [
+      _createHandle(handleType: ResizeHandleType.topLeft),
+      _createHandle(handleType: ResizeHandleType.topRight),
+      _createHandle(handleType: ResizeHandleType.bottomLeft),
+      _createHandle(handleType: ResizeHandleType.bottomRight),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -317,48 +542,85 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: Row(
+      body: Column( // New Column
         children: [
-          const LeftToolbar(),
-          Expanded(
-            child: Container(
-              color: Colors.grey[800],
-              child: InteractiveViewer(
-                transformationController: _transformationController,
-                constrained: false,
-                boundaryMargin: const EdgeInsets.all(double.infinity),
-                minScale: 0.05,
-                maxScale: 10.0,
-                onInteractionEnd: (details) {
-                   Provider.of<CanvasProvider>(context, listen: false).setZoomLevel(_transformationController.value.getMaxScaleOnAxis());
-                },
-                child: Center(
-                  child: RepaintBoundary(
-                    key: _canvasKey,
-                    child: Container(
-                      width: 1280,
-                      height: 720,
-                      clipBehavior: Clip.hardEdge,
-                      decoration: BoxDecoration(
-                        color: canvasProvider.backgroundColor,
-                        border: Border.all(color: Colors.black54, width: 1.0 / currentCanvasZoom),
-                      ),
-                      child: Consumer<CanvasProvider>(
-                        builder: (context, provider, child) {
-                          return Stack(
-                            children: provider.elements.map((element) {
-                              return _buildElementWidget(element, provider, currentCanvasZoom);
-                            }).toList(),
-                          );
-                        },
+          Expanded( // Existing Row content is now the first child of Column, wrapped in Expanded
+            child: Row(
+              children: [
+                const LeftToolbar(),
+                Expanded(
+                  child: Container(
+                    color: Colors.grey[800],
+                    child: InteractiveViewer(
+                      transformationController: _transformationController,
+                      constrained: false,
+                      boundaryMargin: const EdgeInsets.all(double.infinity),
+                      minScale: 0.05,
+                      maxScale: 10.0,
+                      onInteractionEnd: (details) {
+                         Provider.of<CanvasProvider>(context, listen: false).setZoomLevel(_transformationController.value.getMaxScaleOnAxis());
+                      },
+                      child: Center(
+                        child: RepaintBoundary(
+                          key: _canvasKey,
+                          child: Container(
+                            width: 1280,
+                            height: 720,
+                            clipBehavior: Clip.hardEdge,
+                            decoration: BoxDecoration(
+                              // Background color is now handled by the first layer of the Stack below
+                              border: Border.all(color: Colors.black54, width: 1.0 / currentCanvasZoom),
+                            ),
+                            child: Stack( // New Stack for background and elements
+                              fit: StackFit.expand,
+                              children: [
+                                // Background Image Layer
+                                Consumer<CanvasProvider>(
+                                  builder: (context, provider, child) {
+                                    String? bgImagePath = provider.backgroundImagePathValue;
+                                    BoxFit? bgFit = provider.backgroundFitValue;
+                                    if (bgImagePath != null) {
+                                      File imageFile = File(bgImagePath);
+                                      return Image.file(
+                                        imageFile,
+                                        width: 1280,
+                                        height: 720,
+                                        fit: bgFit ?? BoxFit.contain, // Default fit
+                                        errorBuilder: (context, error, stackTrace) {
+                                          // On error, fallback to background color
+                                          print("Error loading background image: $error");
+                                          return Container(color: provider.backgroundColor);
+                                        },
+                                      );
+                                    } else {
+                                      // No background image, just use background color
+                                      return Container(color: provider.backgroundColor);
+                                    }
+                                  },
+                                ),
+                                // Elements Layer
+                                Consumer<CanvasProvider>(
+                                  builder: (context, provider, child) {
+                                    return Stack(
+                                      children: provider.elements.map((element) {
+                                        return _buildElementWidget(element, provider, currentCanvasZoom);
+                                      }).toList(),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
+                const RightToolbar(),
+              ],
             ),
           ),
-          const RightToolbar(),
+          const BottomPropertiesToolbar(), // Add the new toolbar here
         ],
       ),
     );
