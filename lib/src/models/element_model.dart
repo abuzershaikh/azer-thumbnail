@@ -42,6 +42,10 @@ abstract class CanvasElement {
   double rotation;
   Size size;
   final bool isLocked;
+  final double opacity;
+  final Color? shadowColor;
+  final Offset? shadowOffset;
+  final double shadowBlurRadius;
 
   CanvasElement({
     required this.id,
@@ -51,6 +55,10 @@ abstract class CanvasElement {
     this.rotation = 0.0,
     required this.size,
     this.isLocked = false,
+    this.opacity = 1.0,
+    this.shadowColor,
+    this.shadowOffset,
+    this.shadowBlurRadius = 0.0,
   });
 
   Map<String, dynamic> toJson() {
@@ -62,6 +70,10 @@ abstract class CanvasElement {
       'rotation': rotation,
       'size': sizeToJson(size),
       'isLocked': isLocked,
+      'opacity': opacity,
+      'shadowColor': colorToJson(shadowColor),
+      'shadowOffset': shadowOffset != null ? offsetToJson(shadowOffset!) : null,
+      'shadowBlurRadius': shadowBlurRadius,
     };
   }
 
@@ -72,19 +84,33 @@ abstract class CanvasElement {
     double? rotation,
     Size? size,
     bool? isLocked,
+    double? opacity,
+    Color? shadowColor, ValueGetter<Color?>? shadowColorGetter,
+    Offset? shadowOffset, ValueGetter<Offset?>? shadowOffsetGetter,
+    double? shadowBlurRadius,
   });
 }
 
 class ImageElement extends CanvasElement {
   final String imagePath;
+  final double cornerRadius;
+  final Color? borderColor;
+  final double borderWidth;
 
   ImageElement({
-    required super.id, required this.imagePath, required super.position, super.scale, super.rotation, required super.size, super.isLocked,
+    required super.id, required this.imagePath, required super.position, super.scale, super.rotation, required super.size, super.isLocked, super.opacity,
+    super.shadowColor, super.shadowOffset, super.shadowBlurRadius,
+    this.cornerRadius = 0.0, this.borderColor, this.borderWidth = 0.0,
   }) : super(type: ElementType.image);
 
   @override
   Map<String, dynamic> toJson() {
-    return super.toJson()..addAll({'imagePath': imagePath});
+    return super.toJson()..addAll({
+      'imagePath': imagePath,
+      'cornerRadius': cornerRadius,
+      'borderColor': colorToJson(borderColor),
+      'borderWidth': borderWidth,
+    });
   }
 
   factory ImageElement.fromJson(Map<String, dynamic> json) {
@@ -92,17 +118,35 @@ class ImageElement extends CanvasElement {
       id: json['id'] as String, imagePath: json['imagePath'] as String, position: jsonToOffset(json['position'] as Map<String, dynamic>),
       scale: json['scale'] as double, rotation: json['rotation'] as double, size: jsonToSize(json['size'] as Map<String, dynamic>),
       isLocked: json['isLocked'] as bool? ?? false,
+      cornerRadius: json['cornerRadius'] as double? ?? 0.0,
+      opacity: json['opacity'] as double? ?? 1.0,
+      borderColor: jsonToColor(json['borderColor']),
+      borderWidth: json['borderWidth'] as double? ?? 0.0,
+      shadowColor: jsonToColor(json['shadowColor']),
+      shadowOffset: json['shadowOffset'] != null ? jsonToOffset(json['shadowOffset'] as Map<String, dynamic>) : null,
+      shadowBlurRadius: json['shadowBlurRadius'] as double? ?? 0.0,
     );
   }
 
   @override
   ImageElement copyWith({
-    String? id, Offset? position, double? scale, double? rotation, Size? size, bool? isLocked,
+    String? id, Offset? position, double? scale, double? rotation, Size? size, bool? isLocked, double? opacity,
+    Color? shadowColor, ValueGetter<Color?>? shadowColorGetter, Offset? shadowOffset, ValueGetter<Offset?>? shadowOffsetGetter, double? shadowBlurRadius,
     String? imagePath,
+    double? cornerRadius,
+    ValueGetter<Color?>? borderColorGetter, Color? borderColor,
+    double? borderWidth,
   }) {
     return ImageElement(
       id: id ?? this.id, imagePath: imagePath ?? this.imagePath, position: position ?? this.position,
-      scale: scale ?? this.scale, rotation: rotation ?? this.rotation, size: this.size, isLocked: isLocked ?? this.isLocked,
+      scale: scale ?? this.scale, rotation: rotation ?? this.rotation, size: size ?? this.size, isLocked: isLocked ?? this.isLocked,
+      opacity: opacity ?? this.opacity,
+      shadowColor: shadowColorGetter != null ? shadowColorGetter() : (shadowColor ?? this.shadowColor),
+      shadowOffset: shadowOffsetGetter != null ? shadowOffsetGetter() : (shadowOffset ?? this.shadowOffset),
+      shadowBlurRadius: shadowBlurRadius ?? this.shadowBlurRadius,
+      cornerRadius: cornerRadius ?? this.cornerRadius,
+      borderColor: borderColorGetter != null ? borderColorGetter() : (borderColor ?? this.borderColor),
+      borderWidth: borderWidth ?? this.borderWidth,
     );
   }
 }
@@ -116,7 +160,8 @@ class TextElement extends CanvasElement {
   double outlineWidth;
 
   TextElement({
-    required super.id, required this.text, required super.position, super.scale, super.rotation,
+    required super.id, required this.text, required super.position, super.scale, super.rotation, super.opacity,
+    super.shadowColor, super.shadowOffset, super.shadowBlurRadius,
     TextStyle? style, this.textAlign = TextAlign.center, required super.size, super.isLocked,
     this.textBackgroundColor, this.outlineColor, this.outlineWidth = 0.0,
   }) : style = style ?? const TextStyle(fontSize: 48, color: Colors.black),
@@ -137,19 +182,28 @@ class TextElement extends CanvasElement {
       textAlign: TextAlign.values[json['textAlign'] as int? ?? TextAlign.center.index], size: jsonToSize(json['size'] as Map<String, dynamic>),
       isLocked: json['isLocked'] as bool? ?? false, textBackgroundColor: jsonToColor(json['textBackgroundColor']),
       outlineColor: jsonToColor(json['outlineColor']), outlineWidth: json['outlineWidth'] as double? ?? 0.0,
+      opacity: json['opacity'] as double? ?? 1.0,
+      shadowColor: jsonToColor(json['shadowColor']),
+      shadowOffset: json['shadowOffset'] != null ? jsonToOffset(json['shadowOffset'] as Map<String, dynamic>) : null,
+      shadowBlurRadius: json['shadowBlurRadius'] as double? ?? 0.0,
     );
   }
 
   @override
   TextElement copyWith({
-    String? id, Offset? position, double? scale, double? rotation, Size? size, bool? isLocked,
+    String? id, Offset? position, double? scale, double? rotation, Size? size, bool? isLocked, double? opacity,
+    Color? shadowColor, ValueGetter<Color?>? shadowColorGetter, Offset? shadowOffset, ValueGetter<Offset?>? shadowOffsetGetter, double? shadowBlurRadius,
     String? text, TextStyle? style, TextAlign? textAlign,
-    ValueGetter<Color?>? textBackgroundColorGetter, Color? textBackgroundColor, // Allow explicit null via getter
-    ValueGetter<Color?>? outlineColorGetter, Color? outlineColor, // Allow explicit null via getter
+    ValueGetter<Color?>? textBackgroundColorGetter, Color? textBackgroundColor,
+    ValueGetter<Color?>? outlineColorGetter, Color? outlineColor,
     double? outlineWidth,
   }) {
     return TextElement(
       id: id ?? this.id, text: text ?? this.text, position: position ?? this.position, scale: scale ?? this.scale, rotation: rotation ?? this.rotation,
+      opacity: opacity ?? this.opacity,
+      shadowColor: shadowColorGetter != null ? shadowColorGetter() : (shadowColor ?? this.shadowColor),
+      shadowOffset: shadowOffsetGetter != null ? shadowOffsetGetter() : (shadowOffset ?? this.shadowOffset),
+      shadowBlurRadius: shadowBlurRadius ?? this.shadowBlurRadius,
       style: style ?? this.style, textAlign: textAlign ?? this.textAlign, size: size ?? this.size, isLocked: isLocked ?? this.isLocked,
       textBackgroundColor: textBackgroundColorGetter != null ? textBackgroundColorGetter() : (textBackgroundColor ?? this.textBackgroundColor),
       outlineColor: outlineColorGetter != null ? outlineColorGetter() : (outlineColor ?? this.outlineColor),
@@ -162,11 +216,14 @@ class RectangleElement extends CanvasElement {
   Color color;
   Color? outlineColor;
   double outlineWidth;
+  final double cornerRadius;
 
   RectangleElement({
     required super.id, required super.position, required super.size, this.color = Colors.blue,
-    super.scale, super.rotation, super.isLocked,
-    this.outlineColor, this.outlineWidth = 0.0, // New properties
+    super.scale, super.rotation, super.isLocked, super.opacity,
+    super.shadowColor, super.shadowOffset, super.shadowBlurRadius,
+    this.outlineColor, this.outlineWidth = 0.0,
+    this.cornerRadius = 0.0,
   }) : super(type: ElementType.rectangle);
 
   @override
@@ -175,6 +232,7 @@ class RectangleElement extends CanvasElement {
       'color': colorToJson(color),
       'outlineColor': colorToJson(outlineColor),
       'outlineWidth': outlineWidth,
+      'cornerRadius': cornerRadius,
     });
   }
 
@@ -184,19 +242,31 @@ class RectangleElement extends CanvasElement {
       scale: json['scale'] as double, rotation: json['rotation'] as double, size: jsonToSize(json['size'] as Map<String, dynamic>),
       color: jsonToColor(json['color'] as int)!, isLocked: json['isLocked'] as bool? ?? false,
       outlineColor: jsonToColor(json['outlineColor']), outlineWidth: json['outlineWidth'] as double? ?? 0.0,
+      cornerRadius: json['cornerRadius'] as double? ?? 0.0,
+      opacity: json['opacity'] as double? ?? 1.0,
+      shadowColor: jsonToColor(json['shadowColor']),
+      shadowOffset: json['shadowOffset'] != null ? jsonToOffset(json['shadowOffset'] as Map<String, dynamic>) : null,
+      shadowBlurRadius: json['shadowBlurRadius'] as double? ?? 0.0,
     );
   }
 
   @override
   RectangleElement copyWith({
-    String? id, Offset? position, double? scale, double? rotation, Size? size, bool? isLocked,
+    String? id, Offset? position, double? scale, double? rotation, Size? size, bool? isLocked, double? opacity,
+    Color? shadowColor, ValueGetter<Color?>? shadowColorGetter, Offset? shadowOffset, ValueGetter<Offset?>? shadowOffsetGetter, double? shadowBlurRadius,
     Color? color, Color? outlineColor, ValueGetter<Color?>? outlineColorGetter, double? outlineWidth,
+    double? cornerRadius,
   }) {
     return RectangleElement(
       id: id ?? this.id, position: position ?? this.position, scale: scale ?? this.scale, rotation: rotation ?? this.rotation,
+      opacity: opacity ?? this.opacity,
+      shadowColor: shadowColorGetter != null ? shadowColorGetter() : (shadowColor ?? this.shadowColor),
+      shadowOffset: shadowOffsetGetter != null ? shadowOffsetGetter() : (shadowOffset ?? this.shadowOffset),
+      shadowBlurRadius: shadowBlurRadius ?? this.shadowBlurRadius,
       size: size ?? this.size, color: color ?? this.color, isLocked: isLocked ?? this.isLocked,
       outlineColor: outlineColorGetter != null ? outlineColorGetter() : (outlineColor ?? this.outlineColor),
       outlineWidth: outlineWidth ?? this.outlineWidth,
+      cornerRadius: cornerRadius ?? this.cornerRadius,
     );
   }
 }
@@ -208,8 +278,9 @@ class CircleElement extends CanvasElement {
 
   CircleElement({
     required super.id, required super.position, required double radius, this.color = Colors.red,
-    super.scale, super.rotation, super.isLocked,
-    this.outlineColor, this.outlineWidth = 0.0, // New properties
+    super.scale, super.rotation, super.isLocked, super.opacity,
+    super.shadowColor, super.shadowOffset, super.shadowBlurRadius,
+    this.outlineColor, this.outlineWidth = 0.0,
   }) : super(type: ElementType.circle, size: Size(radius * 2, radius * 2));
 
   double get radius => size.width / 2;
@@ -226,12 +297,17 @@ class CircleElement extends CanvasElement {
       scale: json['scale'] as double, rotation: json['rotation'] as double, radius: radius,
       color: jsonToColor(json['color'] as int)!, isLocked: json['isLocked'] as bool? ?? false,
       outlineColor: jsonToColor(json['outlineColor']), outlineWidth: json['outlineWidth'] as double? ?? 0.0,
+      opacity: json['opacity'] as double? ?? 1.0,
+      shadowColor: jsonToColor(json['shadowColor']),
+      shadowOffset: json['shadowOffset'] != null ? jsonToOffset(json['shadowOffset'] as Map<String, dynamic>) : null,
+      shadowBlurRadius: json['shadowBlurRadius'] as double? ?? 0.0,
     );
   }
 
   @override
   CircleElement copyWith({
-    String? id, Offset? position, double? scale, double? rotation, Size? size, bool? isLocked,
+    String? id, Offset? position, double? scale, double? rotation, Size? size, bool? isLocked, double? opacity,
+    Color? shadowColor, ValueGetter<Color?>? shadowColorGetter, Offset? shadowOffset, ValueGetter<Offset?>? shadowOffsetGetter, double? shadowBlurRadius,
     double? radius, Color? color, Color? outlineColor, ValueGetter<Color?>? outlineColorGetter, double? outlineWidth,
   }) {
     double newRadius;
@@ -244,6 +320,10 @@ class CircleElement extends CanvasElement {
     }
     return CircleElement(
       id: id ?? this.id, position: position ?? this.position, scale: scale ?? this.scale, rotation: rotation ?? this.rotation,
+      opacity: opacity ?? this.opacity,
+      shadowColor: shadowColorGetter != null ? shadowColorGetter() : (shadowColor ?? this.shadowColor),
+      shadowOffset: shadowOffsetGetter != null ? shadowOffsetGetter() : (shadowOffset ?? this.shadowOffset),
+      shadowBlurRadius: shadowBlurRadius ?? this.shadowBlurRadius,
       radius: newRadius, color: color ?? this.color, isLocked: isLocked ?? this.isLocked,
       outlineColor: outlineColorGetter != null ? outlineColorGetter() : (outlineColor ?? this.outlineColor),
       outlineWidth: outlineWidth ?? this.outlineWidth,

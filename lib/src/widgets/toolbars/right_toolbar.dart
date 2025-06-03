@@ -1,6 +1,7 @@
 import 'dart:io'; // For Platform.isWindows
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:thumbnail_maker/src/providers/canvas_provider.dart';
 import 'package:thumbnail_maker/src/models/element_model.dart';
 import 'dart:math' as math; // For pi
@@ -407,6 +408,70 @@ class _RightToolbarState extends State<RightToolbar> {
         ElevatedButton(onPressed: () => canvasProviderNoListen.changeBackgroundColor(Colors.grey[300]!), child: const Text('Light Grey')),
         ElevatedButton(onPressed: () => canvasProviderNoListen.changeBackgroundColor(Colors.black), child: const Text('Black')),
         ElevatedButton(onPressed: () => canvasProviderNoListen.changeBackgroundColor(Colors.red[100]!), child: const Text('Light Red')),
+
+        const SizedBox(height: 12),
+        Text('Background Image:', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 4),
+        ElevatedButton(
+          onPressed: () async {
+            FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.image);
+            if (result != null && result.files.single.path != null) {
+              String imagePath = result.files.single.path!;
+              BoxFit currentFit = Provider.of<CanvasProvider>(context, listen: false).backgroundFitValue ?? BoxFit.contain;
+              Provider.of<CanvasProvider>(context, listen: false).setBackgroundImage(imagePath, currentFit);
+            }
+          },
+          child: const Text('Set Image'),
+        ),
+        Consumer<CanvasProvider>( // Consumer needed here to react to backgroundImagePathValue changes for button enable/disable
+          builder: (context, provider, child) {
+            return ElevatedButton(
+              onPressed: provider.backgroundImagePathValue != null
+                  ? () {
+                      Provider.of<CanvasProvider>(context, listen: false).setBackgroundImage(null, null);
+                    }
+                  : null,
+              style: ElevatedButton.styleFrom(backgroundColor: provider.backgroundImagePathValue != null ? Colors.red[400] : null),
+              child: const Text('Clear Image'),
+            );
+          }
+        ),
+        Consumer<CanvasProvider>( // Consumer for Dropdown visibility and value
+          builder: (context, provider, child) {
+            if (provider.backgroundImagePathValue != null) {
+              return Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: DropdownButtonFormField<BoxFit>(
+                  value: provider.backgroundFitValue ?? BoxFit.contain,
+                  hint: const Text("Fit"),
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    labelText: "Image Fit",
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  ),
+                  items: BoxFit.values.map((BoxFit fit) {
+                    return DropdownMenuItem<BoxFit>(
+                      value: fit,
+                      child: Text(fit.name),
+                    );
+                  }).toList(),
+                  onChanged: (BoxFit? newValue) {
+                    if (newValue != null) {
+                      Provider.of<CanvasProvider>(context, listen: false).setBackgroundImage(
+                        provider.backgroundImagePathValue!,
+                        newValue,
+                      );
+                    }
+                  },
+                ),
+              );
+            } else {
+              return const SizedBox.shrink();
+            }
+          }
+        ),
+
         const SizedBox(height: 16),
         Text('Zoom Level:', style: Theme.of(context).textTheme.titleSmall),
         Consumer<CanvasProvider>(
