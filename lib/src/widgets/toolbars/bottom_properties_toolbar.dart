@@ -19,13 +19,13 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
   late TextEditingController _shadowBlurController;
   late TextEditingController _shadowOffsetXController;
   late TextEditingController _shadowOffsetYController;
-  FocusNode _widthFocusNode = FocusNode();
-  FocusNode _heightFocusNode = FocusNode();
-  FocusNode _cornerRadiusFocusNode = FocusNode();
-  FocusNode _borderWidthFocusNode = FocusNode();
-  FocusNode _shadowBlurFocusNode = FocusNode();
-  FocusNode _shadowOffsetXFocusNode = FocusNode();
-  FocusNode _shadowOffsetYFocusNode = FocusNode();
+  final FocusNode _widthFocusNode = FocusNode();
+  final FocusNode _heightFocusNode = FocusNode();
+  final FocusNode _cornerRadiusFocusNode = FocusNode();
+  final FocusNode _borderWidthFocusNode = FocusNode();
+  final FocusNode _shadowBlurFocusNode = FocusNode();
+  final FocusNode _shadowOffsetXFocusNode = FocusNode();
+  final FocusNode _shadowOffsetYFocusNode = FocusNode();
 
 
   @override
@@ -294,7 +294,7 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
                   width: 130,
                   height: 30,
                   child: Slider(
-                    value: selectedElement.rotation * (180 / 3.1415926535), min: -180.0, max: 180.0, divisions: 360,
+                    value: (selectedElement.rotation * (180 / 3.1415926535)).clamp(-180.0, 180.0), min: -180.0, max: 180.0, divisions: 360,
                     onChanged: isLocked ? null : (double degrees) { canvasProviderNoListen.updateSelectedElementRotation(degrees); },
                   ),
                 ),
@@ -401,8 +401,28 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
       mainAxisSize: MainAxisSize.min,
       children: presetColors.map((Color? color) {
         bool isSelected = (color == null && currentColor == null) || (color != null && currentColor == color);
+        String displayHex = "N/A";
+        if (color != null) {
+          String colorString = color.toString();
+          if (colorString.contains('(0xff')) {
+            var parts = colorString.split('(0xff');
+            if (parts.length > 1) {
+              displayHex = parts[1].replaceAll(')', '');
+            } else {
+              parts = colorString.split('(0x');
+              if (parts.length > 1) {
+                displayHex = parts[1].replaceAll(')', '');
+              }
+            }
+          } else if (colorString.contains('(0x')) {
+            var parts = colorString.split('(0x');
+            if (parts.length > 1) {
+              displayHex = parts[1].replaceAll(')', '');
+            }
+          }
+        }
         return Tooltip(
-          message: color == null ? "Clear Border/Outline" : "Set Border/Outline to ${color.toString().split('(0xff')[1].replaceAll(')', '')}",
+          message: color == null ? "Clear Border/Outline" : "Set Border/Outline to $displayHex",
           child: InkWell(
             onTap: isLocked ? null : () {
               if (element is ImageElement) {
@@ -443,9 +463,19 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
         bool isSelected = currentColor == color;
          if (color == null && currentColor == null) isSelected = true;
 
+        String displayHex = "N/A";
+        if (color != null) {
+          String colorString = color.toString();
+          var parts = colorString.split('(0x');
+          if (parts.length > 1) {
+            displayHex = parts[1].replaceAll(')', '');
+          } else {
+            displayHex = colorString; 
+          }
+        }
 
         return Tooltip(
-          message: color == null ? "Clear Shadow" : "Set Shadow to ${color.toString().split('(0x')[1].replaceAll(')', '')}",
+          message: color == null ? "Clear Shadow" : "Set Shadow to $displayHex",
           child: InkWell(
             onTap: isLocked ? null : () {
                canvasProvider.updateSelectedElementShadow(shadowColor: color, shadowColorGetter: () => color);

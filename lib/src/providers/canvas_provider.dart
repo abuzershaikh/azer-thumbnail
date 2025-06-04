@@ -125,11 +125,11 @@ class CanvasProvider with ChangeNotifier {
       _backgroundColor = Color(projectData['backgroundColor'] as int);
       final List<dynamic> elementListJson = projectData['elements'] as List<dynamic>;
       _elements = elementListJson.map((json) => elementFromJson(json as Map<String, dynamic>)).toList();
-
+      
       backgroundImagePath = projectData['backgroundImagePath'] as String?;
       String? fitName = projectData['backgroundFit'] as String?;
       if (fitName != null) {
-        backgroundFit = BoxFit.values.firstWhere((fit) => fit.name == fitName, orElse: () => null);
+        backgroundFit = BoxFit.values.firstWhere((fit) => fit.name == fitName, orElse: () => BoxFit.contain);
       } else {
         backgroundFit = null;
       }
@@ -356,7 +356,7 @@ class CanvasProvider with ChangeNotifier {
             originalStateOfSelectedElement.rotation != _selectedElement!.rotation ||
             _preGestureState!.backgroundColor != _backgroundColor ||
             _preGestureState!.backgroundImagePath != backgroundImagePath ||
-            _preGestureState!.backgroundFit != backgroundFit
+            _preGestureState!.backgroundFit != backgroundFit 
             ) {
             stateChanged = true;
         }
@@ -407,14 +407,14 @@ class CanvasProvider with ChangeNotifier {
       if (updatedElement is CircleElement) {
         // Preserve the circle's center during resize.
         Offset oldCenter = _elements[index].position + Offset(_elements[index].size.width / 2, _elements[index].size.height / 2);
-
+        
         double newRadius = (newSize.width + newSize.height) / 4; // Average of new width and height / 2
         if (newRadius < 5.0) newRadius = 5.0; // Min radius
 
         Size finalSize = Size(newRadius * 2, newRadius * 2);
         Offset finalPosition = oldCenter - Offset(newRadius, newRadius); // New top-left for the centered circle
 
-        updatedElement = (updatedElement as CircleElement).copyWith(
+        updatedElement = (updatedElement).copyWith(
           position: finalPosition,
           size: finalSize,
         );
@@ -438,7 +438,7 @@ class CanvasProvider with ChangeNotifier {
       // Explicitly cast to dynamic to ensure the correct copyWith is called
       final CanvasElement oldElement = _elements[index];
       final CanvasElement updatedElement = (oldElement as dynamic).copyWith(isLocked: !oldElement.isLocked);
-
+      
       _elements[index] = updatedElement;
       _selectedElement = updatedElement; // Update selected element to the new instance
       notifyListeners();
@@ -460,7 +460,7 @@ class CanvasProvider with ChangeNotifier {
     if (_selectedElement!.opacity == opacity.clamp(0.0, 1.0)) return; // No change
 
     _saveStateForUndo(); // Save current state before changing opacity
-
+    
     final index = _elements.indexWhere((e) => e.id == _selectedElement!.id);
     if (index != -1) {
       // Use dynamic dispatch for copyWith to ensure correct subclass implementation is called
@@ -476,7 +476,7 @@ class CanvasProvider with ChangeNotifier {
     double newRotationInRadians = newRotationInDegrees * (3.141592653589793 / 180);
     // Normalize radians to be within -PI to PI for consistency, though not strictly necessary for math.cos/sin
     // newRotationInRadians = (newRotationInRadians + 3.141592653589793) % (2 * 3.141592653589793) - 3.141592653589793;
-
+    
     // Check if rotation actually changed significantly to avoid unnecessary updates/undo states
     if ((_selectedElement!.rotation - newRotationInRadians).abs() < 0.001) return;
 
@@ -494,7 +494,7 @@ class CanvasProvider with ChangeNotifier {
 
   void updateSelectedElementSize(Size newSize) {
     if (_selectedElement == null || _selectedElement!.isLocked) return;
-
+    
     // Basic validation for minimum size
     if (newSize.width < 5 || newSize.height < 5) {
       // Optionally provide feedback to user about minimum size
@@ -518,7 +518,7 @@ class CanvasProvider with ChangeNotifier {
       Offset oldCenter = oldElement.position + Offset(oldElement.size.width / 2, oldElement.size.height / 2);
       Size finalSize = Size(newRadius * 2, newRadius * 2);
       Offset finalPosition = oldCenter - Offset(newRadius, newRadius);
-
+      
       _selectedElement = circle.copyWith(position: finalPosition, size: finalSize);
     } else {
       // For other elements, just update the size
@@ -555,19 +555,17 @@ class CanvasProvider with ChangeNotifier {
       // Not an element type that supports corner radius
       return;
     }
-
-    if (updatedElement != null) {
-      _selectedElement = updatedElement;
-      final index = _elements.indexWhere((e) => e.id == _selectedElement!.id);
-      if (index != -1) {
-        _elements[index] = _selectedElement!;
-      }
-      notifyListeners();
+    
+    _selectedElement = updatedElement;
+    final index = _elements.indexWhere((e) => e.id == _selectedElement!.id);
+    if (index != -1) {
+      _elements[index] = _selectedElement!;
     }
-  }
+    notifyListeners();
+    }
 
   void updateSelectedElementBorder({
-    ValueGetter<Color?>? borderColorGetter, Color? borderColor,
+    ValueGetter<Color?>? borderColorGetter, Color? borderColor, 
     double? borderWidth,
     ValueGetter<Color?>? outlineColorGetter, Color? outlineColor,
     double? outlineWidth,
@@ -580,7 +578,7 @@ class CanvasProvider with ChangeNotifier {
     if (_selectedElement is ImageElement) {
       ImageElement current = _selectedElement as ImageElement;
       // Check if there's an actual change to avoid unnecessary undo states
-      if ((borderColor != null && current.borderColor != borderColor) ||
+      if ((borderColor != null && current.borderColor != borderColor) || 
           (borderColorGetter != null) || // Explicit null set
           (borderWidth != null && current.borderWidth != borderWidth)) {
         _saveStateForUndo();

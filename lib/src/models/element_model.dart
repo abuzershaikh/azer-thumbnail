@@ -222,7 +222,7 @@ class RectangleElement extends CanvasElement {
     required super.id, required super.position, required super.size, this.color = Colors.blue,
     super.scale, super.rotation, super.isLocked, super.opacity,
     super.shadowColor, super.shadowOffset, super.shadowBlurRadius,
-    this.outlineColor, this.outlineWidth = 0.0,
+    this.outlineColor, this.outlineWidth = 0.0, 
     this.cornerRadius = 0.0,
   }) : super(type: ElementType.rectangle);
 

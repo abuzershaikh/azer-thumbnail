@@ -131,7 +131,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildElementWidget(CanvasElement element, CanvasProvider provider, double currentCanvasZoom) {
     Widget content;
     BoxDecoration? shapeDecoration;
-    final double handleSize = 10.0; // Defined handle size
+    const double handleSize = 10.0; // Defined handle size
 
     if (element is ImageElement) {
       Widget imageWidget = Image.file(
@@ -372,7 +372,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final double handleOffset = -visualHandleSize / 2;
 
     // Helper to create a handle widget
-    Widget _createHandle({
+    Widget createHandle({
       required ResizeHandleType handleType,
       // required Alignment alignment, // Alignment can be inferred from handleType if needed or passed
     }) {
@@ -503,10 +503,10 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return [
-      _createHandle(handleType: ResizeHandleType.topLeft),
-      _createHandle(handleType: ResizeHandleType.topRight),
-      _createHandle(handleType: ResizeHandleType.bottomLeft),
-      _createHandle(handleType: ResizeHandleType.bottomRight),
+      createHandle(handleType: ResizeHandleType.topLeft),
+      createHandle(handleType: ResizeHandleType.topRight),
+      createHandle(handleType: ResizeHandleType.bottomLeft),
+      createHandle(handleType: ResizeHandleType.bottomRight),
     ];
   }
 
@@ -620,7 +620,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          const BottomPropertiesToolbar(), // Add the new toolbar here
+          const SizedBox(height: 70, child: ClipRect(child: BottomPropertiesToolbar())), // Add the new toolbar here
         ],
       ),
     );
