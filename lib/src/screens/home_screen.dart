@@ -12,7 +12,7 @@ import 'package:thumbnail_maker/src/widgets/toolbars/right_toolbar.dart';
 import 'package:thumbnail_maker/src/widgets/toolbars/bottom_properties_toolbar.dart'; // Added import
 import 'dart:math' as math;
 
-enum ResizeHandleType { topLeft, topRight, bottomLeft, bottomRight }
+enum ResizeHandleType { topLeft, topRight, bottomLeft, bottomRight, top, bottom, left, right }
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -70,12 +70,15 @@ class _HomeScreenState extends State<HomeScreen> {
         }
         File savedFile = File(outputFile);
         await savedFile.writeAsBytes(pngBytes);
-        if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved to: ${savedFile.path}')));
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Saved to: ${savedFile.path}')));
       } else {
-        if(mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Save cancelled.')));
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Save cancelled.')));
       }
     } catch (e) {
-      if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
     }
   }
 
@@ -94,14 +97,15 @@ class _HomeScreenState extends State<HomeScreen> {
           outputFile += '.thumbnailproj';
         }
         await Provider.of<CanvasProvider>(context, listen: false).saveProject(outputFile);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Project saved to: $outputFile')));
-        }
+        if (!mounted) return; 
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Project saved to: $outputFile')));
       } else {
-         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Save project cancelled.')));
+         if (!mounted) return; 
+         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Save project cancelled.')));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error saving project: ${e.toString()}')));
+      if (!mounted) return; 
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error saving project: ${e.toString()}')));
     }
   }
 
@@ -118,17 +122,21 @@ class _HomeScreenState extends State<HomeScreen> {
       if (result != null && result.files.single.path != null) {
         final path = result.files.single.path!;
         await Provider.of<CanvasProvider>(context, listen: false).loadProject(path);
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Project loaded from: $path')));
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Project loaded from: $path')));
       } else {
-         if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Load project cancelled.')));
+         if (!mounted) return;
+         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Load project cancelled.')));
       }
     } catch (e) {
-       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error loading project: ${e.toString()}')));
+       if (!mounted) return;
+       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error loading project: ${e.toString()}')));
     }
   }
 
 
   Widget _buildElementWidget(CanvasElement element, CanvasProvider provider, double currentCanvasZoom) {
+    print("[HomeScreen - _buildElementWidget] Rendering Element ID: ${element.id}, Size: ${element.size}, Pos: ${element.position}, Scale: ${element.scale}, Rotation: ${element.rotation}");
     Widget content;
     BoxDecoration? shapeDecoration;
     const double handleSize = 10.0; // Defined handle size
@@ -286,8 +294,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   alignment: Alignment.topRight,
                   child: Container(
                     padding: EdgeInsets.all(2.0 / (element.scale * currentCanvasZoom)),
-                    color: Colors.black.withOpacity(0.1),
-                    child: Icon(Icons.lock, color: Colors.white.withOpacity(0.7), size: 16.0),
+                    color: Colors.black.withAlpha((255 * 0.1).round()),
+                    child: Icon(Icons.lock, color: Colors.white.withAlpha((255 * 0.7).round()), size: 16.0),
                   ),
                 ),
               ),
@@ -372,32 +380,49 @@ class _HomeScreenState extends State<HomeScreen> {
     final double handleOffset = -visualHandleSize / 2;
 
     // Helper to create a handle widget
-    Widget createHandle({
-      required ResizeHandleType handleType,
-      // required Alignment alignment, // Alignment can be inferred from handleType if needed or passed
-    }) {
-      // Determine alignment based on handleType for positioning
-      Alignment alignment;
+    Widget createHandle({required ResizeHandleType handleType}) { // Removed alignment parameter
+      // Determine alignment and positioning based on handleType
+      double? left, top, right, bottom;
       switch (handleType) {
         case ResizeHandleType.topLeft:
-          alignment = Alignment.topLeft;
+          left = handleOffset;
+          top = handleOffset;
           break;
         case ResizeHandleType.topRight:
-          alignment = Alignment.topRight;
+          right = handleOffset;
+          top = handleOffset;
           break;
         case ResizeHandleType.bottomLeft:
-          alignment = Alignment.bottomLeft;
+          left = handleOffset;
+          bottom = handleOffset;
           break;
         case ResizeHandleType.bottomRight:
-          alignment = Alignment.bottomRight;
+          right = handleOffset;
+          bottom = handleOffset;
+          break;
+        case ResizeHandleType.top:
+          top = handleOffset;
+          left = element.size.width / 2 - visualHandleSize / 2; // Centered
+          break;
+        case ResizeHandleType.bottom:
+          bottom = handleOffset;
+          left = element.size.width / 2 - visualHandleSize / 2; // Centered
+          break;
+        case ResizeHandleType.left:
+          left = handleOffset;
+          top = element.size.height / 2 - visualHandleSize / 2; // Centered
+          break;
+        case ResizeHandleType.right:
+          right = handleOffset;
+          top = element.size.height / 2 - visualHandleSize / 2; // Centered
           break;
       }
 
       return Positioned(
-        left: alignment.x == -1 ? handleOffset : null,
-        top: alignment.y == -1 ? handleOffset : null,
-        right: alignment.x == 1 ? handleOffset : null,
-        bottom: alignment.y == 1 ? handleOffset : null,
+        left: left,
+        top: top,
+        right: right,
+        bottom: bottom,
         child: GestureDetector(
           onPanStart: (details) {
             if (element.isLocked) return;
@@ -410,72 +435,132 @@ class _HomeScreenState extends State<HomeScreen> {
           onPanUpdate: (details) {
             if (_initialDragElement == null || _currentHandleType == null || element.isLocked) return;
 
-            final initialElement = _initialDragElement!;
+            // final initialElement = _initialDragElement!; // REMOVED - Use 'element' from closure
             Offset canvasDelta = details.delta / currentCanvasZoom;
 
-            // Rotate canvasDelta by -initialElement.rotation to get localDelta
+            // Rotate canvasDelta by -element.rotation to get localDelta
             Offset localDelta = Offset(
-              canvasDelta.dx * math.cos(-initialElement.rotation) - canvasDelta.dy * math.sin(-initialElement.rotation),
-              canvasDelta.dx * math.sin(-initialElement.rotation) + canvasDelta.dy * math.cos(-initialElement.rotation),
+              canvasDelta.dx * math.cos(-element.rotation) - canvasDelta.dy * math.sin(-element.rotation),
+              canvasDelta.dx * math.sin(-element.rotation) + canvasDelta.dy * math.cos(-element.rotation),
             );
 
-            Size newSize = initialElement.size;
-            Offset newPosition = initialElement.position;
+            Size newSize = element.size; // Base newSize on current element's size
+            Offset newPosition = element.position; // Base newPosition on current element's position
 
             double minSize = 10.0;
 
             switch (_currentHandleType!) {
               case ResizeHandleType.topLeft:
-                double newWidth = initialElement.size.width - localDelta.dx;
-                double newHeight = initialElement.size.height - localDelta.dy;
-                if (newWidth < minSize) { localDelta = Offset(initialElement.size.width - minSize, localDelta.dy); newWidth = minSize; }
-                if (newHeight < minSize) { localDelta = Offset(localDelta.dx, initialElement.size.height - minSize); newHeight = minSize; }
+                double potentialNewWidth = element.size.width - localDelta.dx;
+                double potentialNewHeight = element.size.height - localDelta.dy;
 
-                newSize = Size(newWidth, newHeight);
-                // Calculate the world-space displacement of the top-left corner
+                double actualNewWidth = math.max(minSize, potentialNewWidth);
+                double actualNewHeight = math.max(minSize, potentialNewHeight);
+                
+                newSize = Size(actualNewWidth, actualNewHeight);
+
+                double actualDeltaXForPosition = element.size.width - actualNewWidth;
+                double actualDeltaYForPosition = element.size.height - actualNewHeight;
+                
+                Offset actualLocalDeltaForPosition = Offset(actualDeltaXForPosition, actualDeltaYForPosition);
+
                 Offset positionDelta = Offset(
-                  localDelta.dx * math.cos(initialElement.rotation) - localDelta.dy * math.sin(initialElement.rotation),
-                  localDelta.dx * math.sin(initialElement.rotation) + localDelta.dy * math.cos(initialElement.rotation),
+                  actualLocalDeltaForPosition.dx * math.cos(element.rotation) - actualLocalDeltaForPosition.dy * math.sin(element.rotation),
+                  actualLocalDeltaForPosition.dx * math.sin(element.rotation) + actualLocalDeltaForPosition.dy * math.cos(element.rotation),
                 );
-                newPosition = initialElement.position + positionDelta;
+                newPosition = element.position + positionDelta;
                 break;
               case ResizeHandleType.topRight:
-                double newWidth = initialElement.size.width + localDelta.dx;
-                double newHeight = initialElement.size.height - localDelta.dy;
-                if (newWidth < minSize) { localDelta = Offset(-(initialElement.size.width - minSize), localDelta.dy); newWidth = minSize; }
-                if (newHeight < minSize) { localDelta = Offset(localDelta.dx, initialElement.size.height - minSize); newHeight = minSize; }
+                double potentialNewWidth = element.size.width + localDelta.dx;
+                double potentialNewHeight = element.size.height - localDelta.dy;
 
-                newSize = Size(newWidth, newHeight);
-                // Calculate the world-space displacement of the top-left corner (effectively, only Y changes due to height reduction from top)
-                 Offset positionDelta = Offset(
-                  -localDelta.dy * math.sin(initialElement.rotation), // dx component from dy change
-                  localDelta.dy * math.cos(initialElement.rotation),   // dy component from dy change
+                double actualNewWidth = math.max(minSize, potentialNewWidth);
+                double actualNewHeight = math.max(minSize, potentialNewHeight);
+
+                newSize = Size(actualNewWidth, actualNewHeight);
+
+                double actualDeltaYForPosition = element.size.height - actualNewHeight;
+                
+                Offset actualLocalDeltaForPosition = Offset(0, actualDeltaYForPosition); 
+
+                Offset positionDelta = Offset(
+                  -actualLocalDeltaForPosition.dy * math.sin(element.rotation), 
+                  actualLocalDeltaForPosition.dy * math.cos(element.rotation),   
                 );
-                newPosition = initialElement.position + positionDelta;
+                newPosition = element.position + positionDelta;
                 break;
               case ResizeHandleType.bottomLeft:
-                double newWidth = initialElement.size.width - localDelta.dx;
-                double newHeight = initialElement.size.height + localDelta.dy;
-                if (newWidth < minSize) { localDelta = Offset(initialElement.size.width - minSize, localDelta.dy); newWidth = minSize; }
-                if (newHeight < minSize) { localDelta = Offset(localDelta.dx, -(initialElement.size.height - minSize)); newHeight = minSize; }
+                double potentialNewWidth = element.size.width - localDelta.dx;
+                double potentialNewHeight = element.size.height + localDelta.dy;
 
-                newSize = Size(newWidth, newHeight);
-                // Calculate the world-space displacement of the top-left corner (effectively, only X changes due to width reduction from left)
+                double actualNewWidth = math.max(minSize, potentialNewWidth);
+                double actualNewHeight = math.max(minSize, potentialNewHeight);
+
+                newSize = Size(actualNewWidth, actualNewHeight);
+
+                double actualDeltaXForPosition = element.size.width - actualNewWidth;
+                
+                Offset actualLocalDeltaForPosition = Offset(actualDeltaXForPosition, 0); 
+
                 Offset positionDelta = Offset(
-                  localDelta.dx * math.cos(initialElement.rotation), // dx component from dx change
-                  localDelta.dx * math.sin(initialElement.rotation),  // dy component from dx change
+                  actualLocalDeltaForPosition.dx * math.cos(element.rotation), 
+                  actualLocalDeltaForPosition.dx * math.sin(element.rotation),  
                 );
-                newPosition = initialElement.position + positionDelta;
+                newPosition = element.position + positionDelta;
                 break;
               case ResizeHandleType.bottomRight:
-                double newWidth = initialElement.size.width + localDelta.dx;
-                double newHeight = initialElement.size.height + localDelta.dy;
+                double newWidth = element.size.width + localDelta.dx;
+                double newHeight = element.size.height + localDelta.dy;
                 if (newWidth < minSize) newWidth = minSize;
                 if (newHeight < minSize) newHeight = minSize;
                 newSize = Size(newWidth, newHeight);
-                // Position does not change when dragging bottom-right
+                // Position does not change from element.position
+                break;
+              case ResizeHandleType.top:
+                double potentialNewHeight = element.size.height - localDelta.dy;
+                double actualNewHeight = math.max(minSize, potentialNewHeight);
+                newSize = Size(element.size.width, actualNewHeight);
+
+                double actualDeltaYForPosition = element.size.height - actualNewHeight;
+                Offset actualLocalDeltaForPosition = Offset(0, actualDeltaYForPosition);
+
+                Offset positionDelta = Offset(
+                  -actualLocalDeltaForPosition.dy * math.sin(element.rotation), 
+                  actualLocalDeltaForPosition.dy * math.cos(element.rotation)    
+                );
+                newPosition = element.position + positionDelta;
+                break;
+              case ResizeHandleType.bottom:
+                double newHeight = element.size.height + localDelta.dy;
+                if (newHeight < minSize) newHeight = minSize;
+                newSize = Size(element.size.width, newHeight);
+                // Position does not change from element.position
+                break;
+              case ResizeHandleType.left:
+                double potentialNewWidth = element.size.width - localDelta.dx;
+                double actualNewWidth = math.max(minSize, potentialNewWidth);
+                newSize = Size(actualNewWidth, element.size.height);
+
+                double actualDeltaXForPosition = element.size.width - actualNewWidth;
+                Offset actualLocalDeltaForPosition = Offset(actualDeltaXForPosition, 0);
+                
+                Offset positionDelta = Offset(
+                  actualLocalDeltaForPosition.dx * math.cos(element.rotation), 
+                  actualLocalDeltaForPosition.dx * math.sin(element.rotation)   
+                );
+                newPosition = element.position + positionDelta;
+                break;
+              case ResizeHandleType.right:
+                double newWidth = element.size.width + localDelta.dx;
+                if (newWidth < minSize) newWidth = minSize;
+                newSize = Size(newWidth, element.size.height);
+                // Position does not change from element.position
                 break;
             }
+            // Update debug print to use 'element' for consistency, or _initialDragElement if that's what's intended for "Initial"
+            print("[HomeScreen - onPanUpdate] Handle: $_currentHandleType, Current Element Size: ${element.size}, Current Element Pos: ${element.position}");
+            print("[HomeScreen - onPanUpdate] LocalDelta: $localDelta, CanvasDelta: $canvasDelta");
+            print("[HomeScreen - onPanUpdate] Calculated New Size: $newSize, New Position: $newPosition");
             provider.updateSelectedElementSizeAndPosition(newPosition, newSize);
           },
           onPanEnd: (details) {
@@ -507,6 +592,10 @@ class _HomeScreenState extends State<HomeScreen> {
       createHandle(handleType: ResizeHandleType.topRight),
       createHandle(handleType: ResizeHandleType.bottomLeft),
       createHandle(handleType: ResizeHandleType.bottomRight),
+      createHandle(handleType: ResizeHandleType.top),
+      createHandle(handleType: ResizeHandleType.bottom),
+      createHandle(handleType: ResizeHandleType.left),
+      createHandle(handleType: ResizeHandleType.right),
     ];
   }
 
@@ -588,7 +677,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         fit: bgFit ?? BoxFit.contain, // Default fit
                                         errorBuilder: (context, error, stackTrace) {
                                           // On error, fallback to background color
-                                          print("Error loading background image: $error");
+                                          // print("Error loading background image: $error"); // REMOVED
                                           return Container(color: provider.backgroundColor);
                                         },
                                       );

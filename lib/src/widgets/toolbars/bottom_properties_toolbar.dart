@@ -231,7 +231,7 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
         color: Colors.grey[200],
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withAlpha((255 * 0.1).round()),
             spreadRadius: 0,
             blurRadius: 4,
             offset: const Offset(0, -2), // changes position of shadow

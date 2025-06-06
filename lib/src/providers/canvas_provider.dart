@@ -32,7 +32,7 @@ class CanvasProvider with ChangeNotifier {
 
   CanvasElement? _selectedElement;
 
-  Offset? _lastFocalPoint; // Not strictly used in current simplified gesture model
+  // Offset? _lastFocalPoint; // Not strictly used in current simplified gesture model - REMOVED
   double _initialScale = 1.0;
   double _initialRotation = 0.0;
 
@@ -60,8 +60,8 @@ class CanvasProvider with ChangeNotifier {
         return RectangleElement.fromJson(json);
       case ElementType.circle:
         return CircleElement.fromJson(json);
-      default:
-        throw Exception('Unsupported element type for deserialization: $type');
+      // default: // REMOVED - ElementType.values.firstWhere already throws if type is unknown
+      //   throw Exception('Unsupported element type for deserialization: $type');
     }
   }
 
@@ -109,7 +109,7 @@ class CanvasProvider with ChangeNotifier {
       final String jsonString = jsonEncode(projectData);
       await File(filePath).writeAsString(jsonString);
     } catch (e) {
-      print('Error saving project: $e');
+      // print('Error saving project: $e'); // REMOVED
       rethrow;
     }
   }
@@ -139,7 +139,7 @@ class CanvasProvider with ChangeNotifier {
       // _redoStack is cleared by _saveStateForUndo
       notifyListeners();
     } catch (e) {
-      print('Error loading project: $e');
+      // print('Error loading project: $e'); // REMOVED
       rethrow;
     }
   }
@@ -218,7 +218,7 @@ class CanvasProvider with ChangeNotifier {
     if (currentElementInList.isLocked) {
       // Optional: Provide feedback that element is locked (e.g., via a status message provider)
       // For now, silently ignore or print debug message.
-      print("Element ${currentElementInList.id} is locked. Update from toolbar ignored.");
+      // print("Element ${currentElementInList.id} is locked. Update from toolbar ignored."); // REMOVED
       return;
     }
 
@@ -381,6 +381,10 @@ class CanvasProvider with ChangeNotifier {
   }
 
   void updateSelectedElementSizeAndPosition(Offset newPosition, Size newSize) {
+    print("[CanvasProvider - updateSelectedElementSizeAndPosition] Received New Size: $newSize, New Position: $newPosition");
+    if (_selectedElement != null) {
+      print("[CanvasProvider - updateSelectedElementSizeAndPosition] Selected Element ID: ${_selectedElement!.id}, Current Size: ${_selectedElement!.size}, Current Pos: ${_selectedElement!.position}");
+    }
     if (_selectedElement == null || _selectedElement!.isLocked) return;
 
     // Ensure this is treated as part of an ongoing gesture if _preGestureState is set
@@ -422,8 +426,13 @@ class CanvasProvider with ChangeNotifier {
       // Text element size is handled by direct manipulation, so no special recalc here,
       // unlike in updateElement where it's based on text content changes.
 
+      final oldElementInList = _elements[index];
+      print("[CanvasProvider - updateSelectedElementSizeAndPosition] Element in list (ID: ${oldElementInList.id}) BEFORE update: Size: ${oldElementInList.size}, Pos: ${oldElementInList.position}");
+      print("[CanvasProvider - updateSelectedElementSizeAndPosition] Updated Element (ID: ${updatedElement.id}) data: Size: ${updatedElement.size}, Pos: ${updatedElement.position}");
       _elements[index] = updatedElement;
       _selectedElement = updatedElement;
+      print("[CanvasProvider - updateSelectedElementSizeAndPosition] _selectedElement AFTER update: Size: ${_selectedElement!.size}, Pos: ${_selectedElement!.position}");
+      _elements = List.from(_elements); // New line
       notifyListeners();
     }
   }
