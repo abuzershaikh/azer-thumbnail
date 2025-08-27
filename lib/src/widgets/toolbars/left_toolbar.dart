@@ -82,63 +82,76 @@ class LeftToolbar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final canvasProviderNoListen = Provider.of<CanvasProvider>(context, listen: false);
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
 
     return Container(
       width: 200,
-      color: Colors.blueGrey[100],
+      color: colorScheme.surfaceContainerLow, // Updated background color
       padding: const EdgeInsets.all(8.0),
-      child: SingleChildScrollView( // Added to prevent overflow if many buttons
+      child: SingleChildScrollView(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
+            Text(
               'Elements',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold), // Updated text style
             ),
-            const SizedBox(height: 10),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.image),
-              label: const Text('Add Image'),
-              onPressed: () => _pickImage(context),
-              style: ElevatedButton.styleFrom(
-                foregroundColor: Colors.white,
-                backgroundColor: Colors.teal,
+            const SizedBox(height: 12), // Adjusted spacing
+            Tooltip(
+              message: 'Add image from file',
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.image),
+                label: const Text('Add Image'),
+                onPressed: () => _pickImage(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorScheme.primaryContainer,
+                  foregroundColor: colorScheme.onPrimaryContainer,
+                ),
               ),
             ),
             const SizedBox(height: 8),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.text_fields),
-              label: const Text('Add Text'),
-              onPressed: () => _showAddTextDialog(context),
-              style: ElevatedButton.styleFrom(
-                foregroundColor: Colors.white,
-                backgroundColor: Colors.indigo,
+            Tooltip(
+              message: 'Add text element',
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.text_fields),
+                label: const Text('Add Text'),
+                onPressed: () => _showAddTextDialog(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorScheme.primaryContainer,
+                  foregroundColor: colorScheme.onPrimaryContainer,
+                ),
               ),
             ),
             const SizedBox(height: 8),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.crop_square), // Icon for rectangle
-              label: const Text('Add Rectangle'),
-              onPressed: () {
-                canvasProviderNoListen.addRectangleElement();
-              },
-              style: ElevatedButton.styleFrom(
-                foregroundColor: Colors.white,
-                backgroundColor: Colors.blueAccent,
+            Tooltip(
+              message: 'Add rectangle shape',
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.crop_square), 
+                label: const Text('Add Rectangle'),
+                onPressed: () {
+                  canvasProviderNoListen.addRectangleElement();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorScheme.primaryContainer,
+                  foregroundColor: colorScheme.onPrimaryContainer,
+                ),
               ),
             ),
             const SizedBox(height: 8),
-            ElevatedButton.icon(
-              icon: const Icon(Icons.circle_outlined), // Icon for circle
-              label: const Text('Add Circle'),
-              onPressed: () {
-                canvasProviderNoListen.addCircleElement();
-              },
-              style: ElevatedButton.styleFrom(
-                foregroundColor: Colors.white,
-                backgroundColor: Colors.greenAccent[700],
+            Tooltip(
+              message: 'Add circle shape',
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.circle_outlined), 
+                label: const Text('Add Circle'),
+                onPressed: () {
+                  canvasProviderNoListen.addCircleElement();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: colorScheme.primaryContainer,
+                  foregroundColor: colorScheme.onPrimaryContainer,
+                ),
               ),
             ),
           ],

@@ -96,11 +96,12 @@ class ImageElement extends CanvasElement {
   final double cornerRadius;
   final Color? borderColor;
   final double borderWidth;
+  final double borderBlurRadius; // New property
 
   ImageElement({
     required super.id, required this.imagePath, required super.position, super.scale, super.rotation, required super.size, super.isLocked, super.opacity,
     super.shadowColor, super.shadowOffset, super.shadowBlurRadius,
-    this.cornerRadius = 0.0, this.borderColor, this.borderWidth = 0.0,
+    this.cornerRadius = 0.0, this.borderColor, this.borderWidth = 0.0, this.borderBlurRadius = 0.0, // Initialize in constructor
   }) : super(type: ElementType.image);
 
   @override
@@ -110,6 +111,7 @@ class ImageElement extends CanvasElement {
       'cornerRadius': cornerRadius,
       'borderColor': colorToJson(borderColor),
       'borderWidth': borderWidth,
+      'borderBlurRadius': borderBlurRadius, // Add to toJson
     });
   }
 
@@ -122,6 +124,7 @@ class ImageElement extends CanvasElement {
       opacity: json['opacity'] as double? ?? 1.0,
       borderColor: jsonToColor(json['borderColor']),
       borderWidth: json['borderWidth'] as double? ?? 0.0,
+      borderBlurRadius: json['borderBlurRadius'] as double? ?? 0.0, // Add to fromJson
       shadowColor: jsonToColor(json['shadowColor']),
       shadowOffset: json['shadowOffset'] != null ? jsonToOffset(json['shadowOffset'] as Map<String, dynamic>) : null,
       shadowBlurRadius: json['shadowBlurRadius'] as double? ?? 0.0,
@@ -136,6 +139,7 @@ class ImageElement extends CanvasElement {
     double? cornerRadius,
     ValueGetter<Color?>? borderColorGetter, Color? borderColor,
     double? borderWidth,
+    double? borderBlurRadius, // Add to copyWith parameters
   }) {
     return ImageElement(
       id: id ?? this.id, imagePath: imagePath ?? this.imagePath, position: position ?? this.position,
@@ -147,6 +151,7 @@ class ImageElement extends CanvasElement {
       cornerRadius: cornerRadius ?? this.cornerRadius,
       borderColor: borderColorGetter != null ? borderColorGetter() : (borderColor ?? this.borderColor),
       borderWidth: borderWidth ?? this.borderWidth,
+      borderBlurRadius: borderBlurRadius ?? this.borderBlurRadius, // Add to copyWith logic
     );
   }
 }

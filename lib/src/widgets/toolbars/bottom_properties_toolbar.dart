@@ -26,6 +26,8 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
   final FocusNode _shadowBlurFocusNode = FocusNode();
   final FocusNode _shadowOffsetXFocusNode = FocusNode();
   final FocusNode _shadowOffsetYFocusNode = FocusNode();
+  late TextEditingController _borderBlurRadiusController; // New controller
+  final FocusNode _borderBlurRadiusFocusNode = FocusNode(); // New focus node
 
 
   @override
@@ -38,6 +40,7 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
     _shadowBlurController = TextEditingController();
     _shadowOffsetXController = TextEditingController();
     _shadowOffsetYController = TextEditingController();
+    _borderBlurRadiusController = TextEditingController(); // Initialize new controller
 
     // Add listeners to focus nodes to commit changes on unfocus
     _widthFocusNode.addListener(_onFocusChange);
@@ -47,6 +50,7 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
     _shadowBlurFocusNode.addListener(_onFocusChange);
     _shadowOffsetXFocusNode.addListener(_onFocusChange);
     _shadowOffsetYFocusNode.addListener(_onFocusChange);
+    _borderBlurRadiusFocusNode.addListener(_onFocusChange); // Add listener for new focus node
 
     // Initial update of text controllers
     _updateTextControllers(Provider.of<CanvasProvider>(context, listen: false).selectedElement);
@@ -61,6 +65,7 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
     if (!_shadowBlurFocusNode.hasFocus) _submitShadowBlur();
     if (!_shadowOffsetXFocusNode.hasFocus) _submitShadowOffsetX();
     if (!_shadowOffsetYFocusNode.hasFocus) _submitShadowOffsetY();
+    if (!_borderBlurRadiusFocusNode.hasFocus) _submitBorderBlurRadius(); // Submit for new field
   }
 
   @override
@@ -109,6 +114,15 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
       _shadowOffsetYController.text = element.shadowOffset?.dy.toStringAsFixed(0) ?? "0";
     }
 
+    // Update border blur radius controller
+    if (element is ImageElement) {
+      if (!_borderBlurRadiusFocusNode.hasFocus) {
+        _borderBlurRadiusController.text = element.borderBlurRadius.toStringAsFixed(1);
+      }
+    } else {
+      _borderBlurRadiusController.text = '';
+    }
+
     } else {
       _widthController.clear();
       _heightController.clear();
@@ -117,6 +131,7 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
       _shadowBlurController.clear();
       _shadowOffsetXController.clear();
       _shadowOffsetYController.clear();
+      _borderBlurRadiusController.clear(); // Clear new controller
     }
   }
 
@@ -202,6 +217,9 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
     _shadowOffsetXFocusNode.dispose();
     _shadowOffsetYFocusNode.removeListener(_onFocusChange);
     _shadowOffsetYFocusNode.dispose();
+    _borderBlurRadiusController.dispose(); // Dispose new controller
+    _borderBlurRadiusFocusNode.removeListener(_onFocusChange); // Remove listener
+    _borderBlurRadiusFocusNode.dispose(); // Dispose new focus node
     super.dispose();
   }
 
@@ -222,16 +240,18 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
 
 
     final canvasProviderNoListen = Provider.of<CanvasProvider>(context, listen: false);
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+    final TextTheme textTheme = Theme.of(context).textTheme;
     bool isLocked = selectedElement.isLocked;
 
     return Container(
-      height: 70, // Increased height for TextFields
+      height: 70, 
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       decoration: BoxDecoration(
-        color: Colors.grey[200],
+        color: colorScheme.surfaceContainer, // Updated background color
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha((255 * 0.1).round()),
+            color: colorScheme.shadow.withOpacity(0.1), // Updated shadow color
             spreadRadius: 0,
             blurRadius: 4,
             offset: const Offset(0, -2), // changes position of shadow
@@ -245,17 +265,17 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
             // Size Inputs
-            _buildTextFieldProperty(context, "W", _widthController, _widthFocusNode, isLocked, _submitWidth),
+            _buildTextFieldProperty(context, "W", _widthController, _widthFocusNode, isLocked, _submitWidth, colorScheme, textTheme),
             const SizedBox(width: 8),
-            _buildTextFieldProperty(context, "H", _heightController, _heightFocusNode, isLocked, _submitHeight),
+            _buildTextFieldProperty(context, "H", _heightController, _heightFocusNode, isLocked, _submitHeight, colorScheme, textTheme),
 
             if (selectedElement is ImageElement || selectedElement is RectangleElement) ...[
               const SizedBox(width: 8),
-              _buildTextFieldProperty(context, "Radius", _cornerRadiusController, _cornerRadiusFocusNode, isLocked, _submitCornerRadius, width: 70),
+              _buildTextFieldProperty(context, "Radius", _cornerRadiusController, _cornerRadiusFocusNode, isLocked, _submitCornerRadius, colorScheme, textTheme, width: 70),
             ],
 
             const SizedBox(width: 10),
-            const VerticalDivider(width: 20, thickness: 1, indent: 8, endIndent: 8),
+            const VerticalDivider(width: 20, thickness: 1, indent: 8, endIndent: 8), // Will use theme's dividerColor
             const SizedBox(width: 10),
 
             // Opacity Slider
@@ -265,13 +285,15 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
               children: [
                 Padding(
                   padding: const EdgeInsets.only(left: 8.0, top: 4.0),
-                  child: Text('Opacity: ${(selectedElement.opacity * 100).toStringAsFixed(0)}%', style: Theme.of(context).textTheme.bodySmall),
+                  child: Text('Opacity: ${(selectedElement.opacity * 100).toStringAsFixed(0)}%', style: textTheme.bodySmall),
                 ),
                 SizedBox(
                   width: 130,
                   height: 30,
                   child: Slider(
                     value: selectedElement.opacity, min: 0.0, max: 1.0, divisions: 20,
+                    activeColor: colorScheme.primary,
+                    inactiveColor: colorScheme.onSurface.withOpacity(0.38),
                     onChanged: isLocked ? null : (double value) { canvasProviderNoListen.updateSelectedElementOpacity(value); },
                   ),
                 ),
@@ -288,13 +310,15 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
               children: [
                  Padding(
                   padding: const EdgeInsets.only(left: 8.0, top: 4.0),
-                  child: Text('Rotation: ${(selectedElement.rotation * (180 / 3.1415926535)).toStringAsFixed(0)}°', style: Theme.of(context).textTheme.bodySmall),
+                  child: Text('Rotation: ${(selectedElement.rotation * (180 / 3.1415926535)).toStringAsFixed(0)}°', style: textTheme.bodySmall),
                 ),
                 SizedBox(
                   width: 130,
                   height: 30,
                   child: Slider(
                     value: (selectedElement.rotation * (180 / 3.1415926535)).clamp(-180.0, 180.0), min: -180.0, max: 180.0, divisions: 360,
+                    activeColor: colorScheme.primary,
+                    inactiveColor: colorScheme.onSurface.withOpacity(0.38),
                     onChanged: isLocked ? null : (double degrees) { canvasProviderNoListen.updateSelectedElementRotation(degrees); },
                   ),
                 ),
@@ -308,7 +332,7 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
             IconButton(
               icon: Icon(selectedElement.isLocked ? Icons.lock : Icons.lock_open),
               tooltip: selectedElement.isLocked ? 'Unlock Element' : 'Lock Element',
-              color: selectedElement.isLocked ? Theme.of(context).colorScheme.primary : Colors.grey[700],
+              color: selectedElement.isLocked ? colorScheme.primary : colorScheme.onSurfaceVariant, // Updated color
               onPressed: () { canvasProviderNoListen.toggleLockSelectedElement(); },
             ),
             const SizedBox(width: 8),
@@ -317,7 +341,7 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
             IconButton(
               icon: const Icon(Icons.delete),
               tooltip: 'Delete Element',
-              color: Colors.red[700],
+              color: colorScheme.error, // Updated color
               onPressed: () { canvasProviderNoListen.deleteElement(selectedElement); },
             ),
 
@@ -333,26 +357,32 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
 
             // Border/Outline Width TextField
             if (selectedElement is ImageElement || selectedElement is TextElement || selectedElement is RectangleElement || selectedElement is CircleElement)
-              _buildTextFieldProperty(context, "B.Width", _borderWidthController, _borderWidthFocusNode, isLocked, _submitBorderWidth, width: 70),
-
+              _buildTextFieldProperty(context, "B.Width", _borderWidthController, _borderWidthFocusNode, isLocked, _submitBorderWidth, colorScheme, textTheme, width: 70),
+            
             const SizedBox(width: 8),
+
+            // Border Blur Radius for ImageElement
+            if (selectedElement is ImageElement) ...[
+              _buildTextFieldProperty(context, "B.Blur", _borderBlurRadiusController, _borderBlurRadiusFocusNode, isLocked, _submitBorderBlurRadius, colorScheme, textTheme, width: 70),
+              const SizedBox(width: 8),
+            ],
 
             // Border/Outline Color Buttons
             if (selectedElement is ImageElement || selectedElement is TextElement || selectedElement is RectangleElement || selectedElement is CircleElement) ...[
-              _buildBorderColorButtons(context, canvasProviderNoListen, selectedElement, isLocked),
+              _buildBorderColorButtons(context, canvasProviderNoListen, selectedElement, isLocked, colorScheme),
               const SizedBox(width: 10),
               const VerticalDivider(width: 20, thickness: 1, indent: 8, endIndent: 8),
               const SizedBox(width: 10),
             ],
 
             // Shadow Properties
-            _buildTextFieldProperty(context, "S.Blur", _shadowBlurController, _shadowBlurFocusNode, isLocked, _submitShadowBlur, width: 70),
+            _buildTextFieldProperty(context, "S.Blur", _shadowBlurController, _shadowBlurFocusNode, isLocked, _submitShadowBlur, colorScheme, textTheme, width: 70),
             const SizedBox(width: 8),
-            _buildTextFieldProperty(context, "S.OffX", _shadowOffsetXController, _shadowOffsetXFocusNode, isLocked, _submitShadowOffsetX),
+            _buildTextFieldProperty(context, "S.OffX", _shadowOffsetXController, _shadowOffsetXFocusNode, isLocked, _submitShadowOffsetX, colorScheme, textTheme),
             const SizedBox(width: 8),
-            _buildTextFieldProperty(context, "S.OffY", _shadowOffsetYController, _shadowOffsetYFocusNode, isLocked, _submitShadowOffsetY),
+            _buildTextFieldProperty(context, "S.OffY", _shadowOffsetYController, _shadowOffsetYFocusNode, isLocked, _submitShadowOffsetY, colorScheme, textTheme),
             const SizedBox(width: 8),
-            _buildShadowColorButtons(context, canvasProviderNoListen, selectedElement, isLocked),
+            _buildShadowColorButtons(context, canvasProviderNoListen, selectedElement, isLocked, colorScheme), // This line was already correct in terms of passing colorScheme
 
           ],
         ),
@@ -360,7 +390,7 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
     );
   }
 
-  Widget _buildTextFieldProperty(BuildContext context, String label, TextEditingController controller, FocusNode focusNode, bool isLocked, VoidCallback onSubmit, {double width = 60}) {
+  Widget _buildTextFieldProperty(BuildContext context, String label, TextEditingController controller, FocusNode focusNode, bool isLocked, VoidCallback onSubmit, ColorScheme colorScheme, TextTheme textTheme, {double width = 60}) {
     return SizedBox(
       width: width,
       child: TextField(
@@ -371,19 +401,23 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
         textAlign: TextAlign.center,
         decoration: InputDecoration(
           labelText: label,
+          filled: true,
+          fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.5),
           isDense: true,
-          border: const OutlineInputBorder(),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8.0),
+            borderSide: BorderSide.none,
+          ),
           contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
         ),
-        style: Theme.of(context).textTheme.bodyMedium,
+        style: textTheme.bodyMedium,
         enabled: !isLocked,
-        onSubmitted: (_) => onSubmit(), // Submit on enter
-        // No onFocusChange here, handled by the listener on the FocusNode
+        onSubmitted: (_) => onSubmit(), 
       ),
     );
   }
 
-  Widget _buildBorderColorButtons(BuildContext context, CanvasProvider canvasProvider, CanvasElement element, bool isLocked) {
+  Widget _buildBorderColorButtons(BuildContext context, CanvasProvider canvasProvider, CanvasElement element, bool isLocked, ColorScheme colorScheme) {
     List<Color?> presetColors = [null, Colors.black, Colors.white, Colors.red, Colors.blue, Colors.green];
     Color? currentColor;
 
@@ -435,15 +469,15 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
               width: 28, height: 28,
               margin: const EdgeInsets.symmetric(horizontal: 3),
               decoration: BoxDecoration(
-                color: color ?? Colors.grey[400], // Show grey for "clear" button
+                color: color ?? colorScheme.surfaceContainerHighest, // Updated clear button color
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey[600]!,
+                  color: isSelected ? colorScheme.primary : colorScheme.outline, // Updated border colors
                   width: isSelected ? 2.5 : 1.5
                 ),
-                boxShadow: isSelected ? [const BoxShadow(color: Colors.black38, blurRadius: 3, spreadRadius: 0.5)] : [],
+                boxShadow: isSelected ? [BoxShadow(color: colorScheme.shadow.withOpacity(0.25), blurRadius: 3, spreadRadius: 0.5)] : [], // Updated shadow
               ),
-              child: color == null ? Icon(Icons.format_clear, size: 16, color: Colors.grey[800]) : null,
+              child: color == null ? Icon(Icons.format_clear, size: 16, color: colorScheme.onSurfaceVariant) : null, // Updated icon color
             ),
           ),
         );
@@ -451,8 +485,8 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
     );
   }
 
-  Widget _buildShadowColorButtons(BuildContext context, CanvasProvider canvasProvider, CanvasElement element, bool isLocked) {
-    List<Color?> presetColors = [null, Colors.black54, Colors.black26, Colors.blueGrey, Colors.deepPurple];
+  Widget _buildShadowColorButtons(BuildContext context, CanvasProvider canvasProvider, CanvasElement element, bool isLocked, ColorScheme colorScheme) {
+    List<Color?> presetColors = [null, Colors.black54, Colors.black26, Colors.blueGrey, Colors.deepPurple.withOpacity(0.75)]; // Adjusted deepPurple for better visibility with shadow
     Color? currentColor = element.shadowColor;
 
     return Row(
@@ -484,15 +518,15 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
               width: 28, height: 28,
               margin: const EdgeInsets.symmetric(horizontal: 3),
               decoration: BoxDecoration(
-                color: color ?? Colors.grey[400], // Show grey for "clear" button
+                color: color ?? colorScheme.surfaceContainerHighest, // Updated clear button color
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? Theme.of(context).colorScheme.primary : Colors.grey[600]!,
+                  color: isSelected ? colorScheme.primary : colorScheme.outline, // Updated border colors
                   width: isSelected ? 2.5 : 1.5
                 ),
-                boxShadow: isSelected ? [const BoxShadow(color: Colors.black38, blurRadius: 3, spreadRadius: 0.5)] : [],
+                boxShadow: isSelected ? [BoxShadow(color: colorScheme.shadow.withOpacity(0.25), blurRadius: 3, spreadRadius: 0.5)] : [], // Updated shadow
               ),
-              child: color == null ? Icon(Icons.format_clear, size: 16, color: Colors.grey[800]) : null,
+              child: color == null ? Icon(Icons.format_clear, size: 16, color: colorScheme.onSurfaceVariant) : null, // Updated icon color
             ),
           ),
         );
@@ -542,4 +576,21 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
     }
   }
 
+  void _submitBorderBlurRadius() {
+    final canvasProvider = Provider.of<CanvasProvider>(context, listen: false);
+    final selectedElement = canvasProvider.selectedElement;
+    if (selectedElement == null || selectedElement is! ImageElement) return;
+
+    // Cast is unnecessary as per analyzer, selectedElement is already promoted to ImageElement.
+    final ImageElement imageElement = selectedElement; 
+    final double? newBlurRadius = double.tryParse(_borderBlurRadiusController.text);
+
+    if (newBlurRadius != null && newBlurRadius != imageElement.borderBlurRadius) {
+      // Clamping will be handled by the provider method
+      canvasProvider.updateSelectedImageElementBorderBlur(newBlurRadius);
+    } else if (newBlurRadius == null) { // Revert to current value if parse fails
+      _borderBlurRadiusController.text = imageElement.borderBlurRadius.toStringAsFixed(1);
+    }
+    // If value is the same, do nothing, text field already reflects it.
+  }
 }

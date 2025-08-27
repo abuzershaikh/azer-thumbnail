@@ -686,4 +686,27 @@ class CanvasProvider with ChangeNotifier {
     }
     notifyListeners();
   }
+
+  void updateSelectedImageElementBorderBlur(double blurRadius) {
+    if (_selectedElement == null || _selectedElement is! ImageElement || _selectedElement!.isLocked) {
+      return;
+    }
+
+    ImageElement currentImageElement = _selectedElement as ImageElement;
+    double clampedBlurRadius = blurRadius.clamp(0.0, 50.0); // Clamp to 0.0 - 50.0
+
+    if (currentImageElement.borderBlurRadius == clampedBlurRadius) {
+      return; // No change
+    }
+
+    _saveStateForUndo();
+
+    _selectedElement = currentImageElement.copyWith(borderBlurRadius: clampedBlurRadius);
+    
+    final index = _elements.indexWhere((e) => e.id == _selectedElement!.id);
+    if (index != -1) {
+      _elements[index] = _selectedElement!;
+    }
+    notifyListeners();
+  }
 }

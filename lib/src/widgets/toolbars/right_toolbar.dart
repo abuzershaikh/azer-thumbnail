@@ -121,6 +121,8 @@ class _RightToolbarState extends State<RightToolbar> {
         final selectedElement = canvasProvider.selectedElement;
         final elements = canvasProvider.elements;
         final canvasProviderNoListen = Provider.of<CanvasProvider>(context, listen: false);
+        final ColorScheme colorScheme = Theme.of(context).colorScheme;
+        final TextTheme textTheme = Theme.of(context).textTheme;
 
         int selectedElementIndex = -1;
         if (selectedElement != null) {
@@ -140,19 +142,19 @@ class _RightToolbarState extends State<RightToolbar> {
 
         return Container(
           width: 230,
-          color: Colors.grey[100],
+          color: colorScheme.surfaceContainerLow, // Updated background color
           padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 16.0),
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('Canvas Tools', textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                Text('Canvas Tools', textAlign: TextAlign.center, style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 10),
-                _buildCanvasTools(context, canvasProviderNoListen),
+                _buildCanvasTools(context, canvasProviderNoListen, colorScheme),
 
                 const Divider(height: 30, thickness: 1.5),
 
-                Text('Selected Element', textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                Text('Selected Element', textAlign: TextAlign.center, style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
                 if (selectedElement == null)
                   const Center(child: Text('No element selected.', textAlign: TextAlign.center,))
@@ -160,37 +162,36 @@ class _RightToolbarState extends State<RightToolbar> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Expanded(child: Text('ID: ${selectedElement.id.substring(0,6)}...', style: Theme.of(context).textTheme.bodySmall, overflow: TextOverflow.ellipsis)),
+                      Expanded(child: Text('ID: ${selectedElement.id.substring(0,6)}...', style: textTheme.bodySmall, overflow: TextOverflow.ellipsis)),
                       IconButton(
                         icon: Icon(selectedElement.isLocked ? Icons.lock : Icons.lock_open),
                         tooltip: selectedElement.isLocked ? 'Unlock Element' : 'Lock Element',
                         onPressed: () {
                           canvasProviderNoListen.toggleElementLock();
                         },
-                        color: selectedElement.isLocked ? Colors.orangeAccent[700] : Colors.grey[700],
+                        color: selectedElement.isLocked ? Colors.orangeAccent[700] : colorScheme.onSurfaceVariant, // Updated color
                       ),
                     ],
                   ),
                   const SizedBox(height: 4),
-                  _buildLayerControls(context, canvasProviderNoListen, canBringForward, canSendBackward, isElementLocked),
+                  _buildLayerControls(context, canvasProviderNoListen, canBringForward, canSendBackward, isElementLocked, textTheme), // Pass textTheme
                   const SizedBox(height: 10),
-                  _buildPropertyRow('Type:', selectedElement.type.toString().split('.').last),
-                  _buildPropertyRow('Scale:', _formatDouble(selectedElement.scale)),
-                  _buildPropertyRow('Rotation:', '${_formatDouble(selectedElement.rotation * 180 / math.pi, places: 1)}°'),
-                  _buildPropertyRow('X:', _formatDouble(selectedElement.position.dx, places: 1)),
-                  _buildPropertyRow('Y:', _formatDouble(selectedElement.position.dy, places: 1)),
+                  _buildPropertyRow('Type:', selectedElement.type.toString().split('.').last, textTheme),
+                  _buildPropertyRow('Scale:', _formatDouble(selectedElement.scale), textTheme),
+                  _buildPropertyRow('Rotation:', '${_formatDouble(selectedElement.rotation * 180 / math.pi, places: 1)}°', textTheme),
+                  _buildPropertyRow('X:', _formatDouble(selectedElement.position.dx, places: 1), textTheme),
+                  _buildPropertyRow('Y:', _formatDouble(selectedElement.position.dy, places: 1), textTheme),
 
-                  if (selectedElement is ImageElement) ..._buildImageSpecificProperties(selectedElement, isElementLocked),
-                  if (selectedElement is TextElement) ..._buildTextSpecificProperties(context, canvasProviderNoListen, selectedElement, isElementLocked),
-                  if (selectedElement is RectangleElement) ..._buildShapeProperties(context, canvasProviderNoListen, selectedElement, isElementLocked, isRect: true),
-                  if (selectedElement is CircleElement) ..._buildShapeProperties(context, canvasProviderNoListen, selectedElement, isElementLocked, isRect: false),
+                  if (selectedElement is ImageElement) ..._buildImageSpecificProperties(selectedElement, isElementLocked, textTheme),
+                  if (selectedElement is TextElement) ..._buildTextSpecificProperties(context, canvasProviderNoListen, selectedElement, isElementLocked, colorScheme, textTheme),
+                  if (selectedElement is RectangleElement) ..._buildShapeProperties(context, canvasProviderNoListen, selectedElement, isElementLocked, colorScheme, textTheme, isRect: true),
+                  if (selectedElement is CircleElement) ..._buildShapeProperties(context, canvasProviderNoListen, selectedElement, isElementLocked, colorScheme, textTheme, isRect: false),
 
                   const SizedBox(height: 16),
                   Center(
-                    child: ElevatedButton(
+                    child: FilledButton.tonal( // Changed to FilledButton.tonal
                       onPressed: () => canvasProviderNoListen.selectElement(null),
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.orange[700]),
-                      child: const Text('Deselect', style: TextStyle(color: Colors.white)),
+                      child: const Text('Deselect'),
                     ),
                   ),
                 ]
@@ -202,11 +203,11 @@ class _RightToolbarState extends State<RightToolbar> {
     );
   }
 
-  Widget _buildLayerControls(BuildContext context, CanvasProvider provider, bool canBringForward, bool canSendBackward, bool isLocked) {
+  Widget _buildLayerControls(BuildContext context, CanvasProvider provider, bool canBringForward, bool canSendBackward, bool isLocked, TextTheme textTheme) { // Add textTheme
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Layering:', style: Theme.of(context).textTheme.titleSmall),
+        Text('Layering:', style: textTheme.titleSmall),
         const SizedBox(height: 4),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -221,17 +222,17 @@ class _RightToolbarState extends State<RightToolbar> {
     );
   }
 
-  List<Widget> _buildImageSpecificProperties(ImageElement element, bool isLocked) {
+  List<Widget> _buildImageSpecificProperties(ImageElement element, bool isLocked, TextTheme textTheme) {
      return [
-      _buildPropertyRow('File:', _getFileName(element.imagePath), overflow: TextOverflow.ellipsis),
-      _buildPropertyRow('Orig. W:', '${_formatDouble(element.size.width, places: 0)}px'),
-      _buildPropertyRow('Orig. H:', '${_formatDouble(element.size.height, places: 0)}px'),
-      _buildPropertyRow('Disp. W:', '${_formatDouble(element.size.width * element.scale, places: 1)}px'),
-      _buildPropertyRow('Disp. H:', '${_formatDouble(element.size.height * element.scale, places: 1)}px'),
+      _buildPropertyRow('File:', _getFileName(element.imagePath), textTheme, overflow: TextOverflow.ellipsis),
+      _buildPropertyRow('Orig. W:', '${_formatDouble(element.size.width, places: 0)}px', textTheme),
+      _buildPropertyRow('Orig. H:', '${_formatDouble(element.size.height, places: 0)}px', textTheme),
+      _buildPropertyRow('Disp. W:', '${_formatDouble(element.size.width * element.scale, places: 1)}px', textTheme),
+      _buildPropertyRow('Disp. H:', '${_formatDouble(element.size.height * element.scale, places: 1)}px', textTheme),
     ];
   }
 
-  List<Widget> _buildTextSpecificProperties(BuildContext context, CanvasProvider provider, TextElement element, bool isLocked) {
+  List<Widget> _buildTextSpecificProperties(BuildContext context, CanvasProvider provider, TextElement element, bool isLocked, ColorScheme colorScheme, TextTheme textTheme) {
     return [
       const SizedBox(height: 8),
       TextFormField(
@@ -244,47 +245,47 @@ class _RightToolbarState extends State<RightToolbar> {
         },
       ),
       const SizedBox(height: 10),
-      _buildPropertyRow('Font Size:', _formatDouble(element.style.fontSize ?? 0, places: 0)),
+      _buildPropertyRow('Font Size:', _formatDouble(element.style.fontSize ?? 0, places: 0), textTheme),
       Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-        IconButton(icon: const Icon(Icons.remove), onPressed: isLocked ? null : () => _updateTextElement(provider, element, fontSizeDelta: -2)),
-        IconButton(icon: const Icon(Icons.add), onPressed: isLocked ? null : () => _updateTextElement(provider, element, fontSizeDelta: 2)),
+        IconButton(icon: const Icon(Icons.remove), tooltip: "Decrease font size", onPressed: isLocked ? null : () => _updateTextElement(provider, element, fontSizeDelta: -2)),
+        IconButton(icon: const Icon(Icons.add), tooltip: "Increase font size", onPressed: isLocked ? null : () => _updateTextElement(provider, element, fontSizeDelta: 2)),
       ]),
       const SizedBox(height: 8),
-      Text('Font Color:', style: Theme.of(context).textTheme.bodyMedium),
+      Text('Font Color:', style: textTheme.bodyMedium),
       Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-        _colorButton(context, provider, element, Colors.black, isTextFontColor: true, isLocked: isLocked),
-        _colorButton(context, provider, element, Colors.red, isTextFontColor: true, isLocked: isLocked),
-        _colorButton(context, provider, element, Colors.white, isTextFontColor: true, isLocked: isLocked),
-        _colorButton(context, provider, element, Colors.blue, isTextFontColor: true, isLocked: isLocked),
+        _colorButton(context, provider, element, Colors.black, colorScheme, isTextFontColor: true, isLocked: isLocked),
+        _colorButton(context, provider, element, Colors.red, colorScheme, isTextFontColor: true, isLocked: isLocked),
+        _colorButton(context, provider, element, Colors.white, colorScheme, isTextFontColor: true, isLocked: isLocked),
+        _colorButton(context, provider, element, Colors.blue, colorScheme, isTextFontColor: true, isLocked: isLocked),
       ]),
       const SizedBox(height: 10),
-      Text('Background Color:', style: Theme.of(context).textTheme.bodyMedium),
+      Text('Background Color:', style: textTheme.bodyMedium),
       Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-        _colorButton(context, provider, element, Colors.transparent, isTextBg: true, clearColor: true, isLocked: isLocked),
-        _colorButton(context, provider, element, Colors.yellowAccent, isTextBg: true, isLocked: isLocked),
-        _colorButton(context, provider, element, Colors.lightBlueAccent, isTextBg: true, isLocked: isLocked),
-        _colorButton(context, provider, element, Colors.grey[300]!, isTextBg: true, isLocked: isLocked),
+        _colorButton(context, provider, element, Colors.transparent, colorScheme, isTextBg: true, clearColor: true, isLocked: isLocked),
+        _colorButton(context, provider, element, Colors.yellowAccent, colorScheme, isTextBg: true, isLocked: isLocked),
+        _colorButton(context, provider, element, Colors.lightBlueAccent, colorScheme, isTextBg: true, isLocked: isLocked),
+        _colorButton(context, provider, element, colorScheme.surfaceContainerHighest, colorScheme, isTextBg: true, isLocked: isLocked), // Use colorScheme
       ]),
        const SizedBox(height: 10),
-      Text('Outline Color:', style: Theme.of(context).textTheme.bodyMedium),
+      Text('Outline Color:', style: textTheme.bodyMedium),
        Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-        _colorButton(context, provider, element, Colors.transparent, isOutline: true, clearColor: true, isLocked: isLocked),
-        _colorButton(context, provider, element, Colors.black, isOutline: true, isLocked: isLocked),
-        _colorButton(context, provider, element, Colors.white, isOutline: true, isLocked: isLocked),
-        _colorButton(context, provider, element, Colors.red, isOutline: true, isLocked: isLocked),
+        _colorButton(context, provider, element, Colors.transparent, colorScheme, isOutline: true, clearColor: true, isLocked: isLocked),
+        _colorButton(context, provider, element, Colors.black, colorScheme, isOutline: true, isLocked: isLocked),
+        _colorButton(context, provider, element, Colors.white, colorScheme, isOutline: true, isLocked: isLocked),
+        _colorButton(context, provider, element, Colors.red, colorScheme, isOutline: true, isLocked: isLocked),
       ]),
       const SizedBox(height: 8),
-      _buildPropertyRow('Outline Width:', _formatDouble(element.outlineWidth, places: 1)),
+      _buildPropertyRow('Outline Width:', _formatDouble(element.outlineWidth, places: 1), textTheme),
       Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-        IconButton(icon: const Icon(Icons.remove), onPressed: isLocked ? null : () => _updateTextElement(provider, element, outlineWidthDelta: -0.5)),
-        IconButton(icon: const Icon(Icons.add), onPressed: isLocked ? null : () => _updateTextElement(provider, element, outlineWidthDelta: 0.5)),
+        IconButton(icon: const Icon(Icons.remove), tooltip: "Decrease outline width", onPressed: isLocked ? null : () => _updateTextElement(provider, element, outlineWidthDelta: -0.5)),
+        IconButton(icon: const Icon(Icons.add), tooltip: "Increase outline width", onPressed: isLocked ? null : () => _updateTextElement(provider, element, outlineWidthDelta: 0.5)),
       ]),
-      _buildPropertyRow('Box W:', '${_formatDouble(element.size.width * element.scale, places: 1)}px'),
-      _buildPropertyRow('Box H:', '${_formatDouble(element.size.height* element.scale, places: 1)}px'),
+      _buildPropertyRow('Box W:', '${_formatDouble(element.size.width * element.scale, places: 1)}px', textTheme),
+      _buildPropertyRow('Box H:', '${_formatDouble(element.size.height* element.scale, places: 1)}px', textTheme),
     ];
   }
 
-  List<Widget> _buildShapeProperties(BuildContext context, CanvasProvider provider, CanvasElement element, bool isLocked, {required bool isRect}) {
+  List<Widget> _buildShapeProperties(BuildContext context, CanvasProvider provider, CanvasElement element, bool isLocked, ColorScheme colorScheme, TextTheme textTheme, {required bool isRect}) {
     Color currentFillColor = Colors.transparent;
     Color? currentOutlineColor;
     double currentOutlineWidth = 0.0;
@@ -301,48 +302,48 @@ class _RightToolbarState extends State<RightToolbar> {
 
     return [
       const SizedBox(height: 8),
-      Text('Fill Color:', style: Theme.of(context).textTheme.bodyMedium),
+      Text('Fill Color:', style: textTheme.bodyMedium),
       Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-        _colorButton(context, provider, element, Colors.blue, isLocked: isLocked, isShapeFill: true),
-        _colorButton(context, provider, element, Colors.green, isLocked: isLocked, isShapeFill: true),
-        _colorButton(context, provider, element, Colors.yellow, isLocked: isLocked, isShapeFill: true),
-        _colorButton(context, provider, element, Colors.orange, isLocked: isLocked, isShapeFill: true),
+        _colorButton(context, provider, element, Colors.blue, colorScheme, isLocked: isLocked, isShapeFill: true),
+        _colorButton(context, provider, element, Colors.green, colorScheme, isLocked: isLocked, isShapeFill: true),
+        _colorButton(context, provider, element, Colors.yellow, colorScheme, isLocked: isLocked, isShapeFill: true),
+        _colorButton(context, provider, element, Colors.orange, colorScheme, isLocked: isLocked, isShapeFill: true),
       ]),
       const SizedBox(height: 10),
-      Text('Outline Color:', style: Theme.of(context).textTheme.bodyMedium),
+      Text('Outline Color:', style: textTheme.bodyMedium),
        Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-        _colorButton(context, provider, element, Colors.transparent, isShapeOutline: true, clearColor: true, isLocked: isLocked),
-        _colorButton(context, provider, element, Colors.black, isShapeOutline: true, isLocked: isLocked),
-        _colorButton(context, provider, element, Colors.white, isShapeOutline: true, isLocked: isLocked),
-        _colorButton(context, provider, element, Colors.red, isShapeOutline: true, isLocked: isLocked),
+        _colorButton(context, provider, element, Colors.transparent, colorScheme, isShapeOutline: true, clearColor: true, isLocked: isLocked),
+        _colorButton(context, provider, element, Colors.black, colorScheme, isShapeOutline: true, isLocked: isLocked),
+        _colorButton(context, provider, element, Colors.white, colorScheme, isShapeOutline: true, isLocked: isLocked),
+        _colorButton(context, provider, element, Colors.red, colorScheme, isShapeOutline: true, isLocked: isLocked),
       ]),
       const SizedBox(height: 8),
-      _buildPropertyRow('Outline Width:', _formatDouble(currentOutlineWidth, places: 1)),
+      _buildPropertyRow('Outline Width:', _formatDouble(currentOutlineWidth, places: 1), textTheme),
       Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-        IconButton(icon: const Icon(Icons.remove), onPressed: isLocked ? null : () => _updateShapeElement(provider, element, outlineWidthDelta: -0.5)),
-        IconButton(icon: const Icon(Icons.add), onPressed: isLocked ? null : () => _updateShapeElement(provider, element, outlineWidthDelta: 0.5)),
+        IconButton(icon: const Icon(Icons.remove), tooltip: "Decrease outline width", onPressed: isLocked ? null : () => _updateShapeElement(provider, element, outlineWidthDelta: -0.5)),
+        IconButton(icon: const Icon(Icons.add), tooltip: "Increase outline width", onPressed: isLocked ? null : () => _updateShapeElement(provider, element, outlineWidthDelta: 0.5)),
       ]),
       if (isRect && element is RectangleElement) ...[
-         _buildPropertyRow('Base W:', '${_formatDouble(element.size.width, places: 1)}px'),
-         _buildPropertyRow('Base H:', '${_formatDouble(element.size.height, places: 1)}px'),
+         _buildPropertyRow('Base W:', '${_formatDouble(element.size.width, places: 1)}px', textTheme),
+         _buildPropertyRow('Base H:', '${_formatDouble(element.size.height, places: 1)}px', textTheme),
       ] else if (!isRect && element is CircleElement) ...[
-        _buildPropertyRow('Radius:', '${_formatDouble(element.radius, places: 1)}px'),
+        _buildPropertyRow('Radius:', '${_formatDouble(element.radius, places: 1)}px', textTheme),
       ]
     ];
   }
 
-  Widget _buildPropertyRow(String label, String value, {TextOverflow overflow = TextOverflow.clip}) {
+  Widget _buildPropertyRow(String label, String value, TextTheme textTheme, {TextOverflow overflow = TextOverflow.clip}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3.0),
       child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text(label, style: TextStyle(fontSize: 13, color: Colors.grey[700])),
+        Text(label, style: textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)), // Updated style
         const SizedBox(width: 8),
-        Expanded(child: Text(value, textAlign: TextAlign.right, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500), overflow: overflow)),
+        Expanded(child: Text(value, textAlign: TextAlign.right, style: textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500), overflow: overflow)), // Updated style
       ]),
     );
   }
 
-  Widget _colorButton(BuildContext context, CanvasProvider provider, CanvasElement element, Color color, {
+  Widget _colorButton(BuildContext context, CanvasProvider provider, CanvasElement element, Color color, ColorScheme colorScheme, {
     bool isTextFontColor = false, bool isLocked = false,
     bool isTextBg = false, bool isOutline = false,
     bool isShapeFill = false, bool isShapeOutline = false,
@@ -386,33 +387,34 @@ class _RightToolbarState extends State<RightToolbar> {
           width: 28, height: 28,
           margin: const EdgeInsets.symmetric(horizontal: 2),
           decoration: BoxDecoration(
-            color: clearColor ? Colors.grey[300] : color,
+            color: clearColor ? colorScheme.surfaceContainerHighest : color, // Updated clear color
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.grey[400]!, width: (color == Colors.white || isSelectedColor) ? 2 : 0.5),
+            border: Border.all(color: colorScheme.outlineVariant, width: (color == Colors.white || isSelectedColor) ? 2 : 0.5), // Updated border color
             boxShadow: isSelectedColor ? [const BoxShadow(color: Colors.black26, blurRadius: 4, spreadRadius: 1)] : [],
           ),
-           child: clearColor && actualColorToCompare == null ? Icon(Icons.check, color: Colors.grey[700], size: 16)
+           child: clearColor && actualColorToCompare == null ? Icon(Icons.check, color: colorScheme.onSurfaceVariant, size: 16) // Updated icon color
                  : (isSelectedColor && !clearColor ? Icon(Icons.check, color: color.computeLuminance() > 0.5 ? Colors.black : Colors.white, size: 16) : null),
         ),
       ),
     );
   }
 
-   Widget _buildCanvasTools(BuildContext context, CanvasProvider canvasProviderNoListen) {
+   Widget _buildCanvasTools(BuildContext context, CanvasProvider canvasProviderNoListen, ColorScheme colorScheme) {
+    final TextTheme textTheme = Theme.of(context).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Background:', style: Theme.of(context).textTheme.titleSmall),
+        Text('Background:', style: textTheme.titleSmall),
         const SizedBox(height: 4),
-        ElevatedButton(onPressed: () => canvasProviderNoListen.changeBackgroundColor(Colors.white), child: const Text('White')),
-        ElevatedButton(onPressed: () => canvasProviderNoListen.changeBackgroundColor(Colors.grey[300]!), child: const Text('Light Grey')),
-        ElevatedButton(onPressed: () => canvasProviderNoListen.changeBackgroundColor(Colors.black), child: const Text('Black')),
-        ElevatedButton(onPressed: () => canvasProviderNoListen.changeBackgroundColor(Colors.red[100]!), child: const Text('Light Red')),
+        FilledButton.tonal(onPressed: () => canvasProviderNoListen.changeBackgroundColor(Colors.white), child: const Text('White')),
+        FilledButton.tonal(onPressed: () => canvasProviderNoListen.changeBackgroundColor(colorScheme.surfaceContainerLow), child: const Text('Theme Aware Grey')),
+        FilledButton.tonal(onPressed: () => canvasProviderNoListen.changeBackgroundColor(Colors.black), child: const Text('Black')),
+        FilledButton.tonal(onPressed: () => canvasProviderNoListen.changeBackgroundColor(Colors.red.shade100), child: const Text('Light Red')),
 
         const SizedBox(height: 12),
-        Text('Background Image:', style: Theme.of(context).textTheme.titleSmall),
+        Text('Background Image:', style: textTheme.titleSmall),
         const SizedBox(height: 4),
-        ElevatedButton(
+        FilledButton.tonal( // Changed to FilledButton.tonal
           onPressed: () async {
             FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.image);
             if (result != null && result.files.single.path != null) {
@@ -423,15 +425,17 @@ class _RightToolbarState extends State<RightToolbar> {
           },
           child: const Text('Set Image'),
         ),
-        Consumer<CanvasProvider>( // Consumer needed here to react to backgroundImagePathValue changes for button enable/disable
+        Consumer<CanvasProvider>( 
           builder: (context, provider, child) {
-            return ElevatedButton(
+            return FilledButton.tonal( // Changed to FilledButton.tonal
               onPressed: provider.backgroundImagePathValue != null
                   ? () {
                       Provider.of<CanvasProvider>(context, listen: false).setBackgroundImage(null, null);
                     }
                   : null,
-              style: ElevatedButton.styleFrom(backgroundColor: provider.backgroundImagePathValue != null ? Colors.red[400] : null),
+              style: provider.backgroundImagePathValue != null 
+                   ? FilledButton.styleFrom(backgroundColor: colorScheme.errorContainer, foregroundColor: colorScheme.onErrorContainer) 
+                   : null,
               child: const Text('Clear Image'),
             );
           }
@@ -473,11 +477,11 @@ class _RightToolbarState extends State<RightToolbar> {
         ),
 
         const SizedBox(height: 16),
-        Text('Zoom Level:', style: Theme.of(context).textTheme.titleSmall),
+        Text('Zoom Level:', style: textTheme.titleSmall),
         Consumer<CanvasProvider>(
             builder: (context, provider, child) {
             final String formattedZoom = provider.zoomLevel.toStringAsFixed(1);
-            return Text('${formattedZoom}x', textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyLarge);
+            return Text('${formattedZoom}x', textAlign: TextAlign.center, style: textTheme.bodyLarge);
             }
         ),
       ],

@@ -13,8 +13,8 @@ class App extends StatelessWidget {
       child: MaterialApp(
         title: 'Thumbnail Maker',
         theme: ThemeData(
-          primarySwatch: Colors.blue,
-          visualDensity: VisualDensity.adaptivePlatformDensity,
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+          visualDensity: VisualDensity.standard,
           useMaterial3: true,
         ),
         debugShowCheckedModeBanner: false,

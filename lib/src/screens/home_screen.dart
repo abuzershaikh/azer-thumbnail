@@ -176,6 +176,14 @@ class _HomeScreenState extends State<HomeScreen> {
           child: content, // content is already the (potentially clipped) imageWidget
         );
       }
+
+      // Apply border blur if specified
+      if (element.borderBlurRadius > 0.0) {
+        content = ImageFiltered(
+          imageFilter: ui.ImageFilter.blur(sigmaX: element.borderBlurRadius, sigmaY: element.borderBlurRadius),
+          child: content, // content is the image, potentially clipped and with a regular border
+        );
+      }
     } else if (element is TextElement) {
       Widget fillText = Text(element.text, style: element.style, textAlign: element.textAlign);
       Widget? textContentWidget;
