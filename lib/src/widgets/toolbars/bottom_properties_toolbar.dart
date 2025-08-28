@@ -3,12 +3,14 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:thumbnail_maker/src/providers/canvas_provider.dart';
 import 'package:thumbnail_maker/src/models/element_model.dart';
+import 'dart:math' as math;
 
 class BottomPropertiesToolbar extends StatefulWidget {
   const BottomPropertiesToolbar({super.key});
 
   @override
-  State<BottomPropertiesToolbar> createState() => _BottomPropertiesToolbarState();
+  State<BottomPropertiesToolbar> createState() =>
+      _BottomPropertiesToolbarState();
 }
 
 class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
@@ -34,7 +36,6 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
   final double _minToolbarHeight = 80.0;
   final double _maxToolbarHeight = 300.0;
 
-
   @override
   void initState() {
     super.initState();
@@ -56,7 +57,8 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
     _shadowOffsetYFocusNode.addListener(_onFocusChange);
     _borderBlurRadiusFocusNode.addListener(_onFocusChange);
 
-    _updateTextControllers(Provider.of<CanvasProvider>(context, listen: false).selectedElement);
+    _updateTextControllers(
+        Provider.of<CanvasProvider>(context, listen: false).selectedElement);
   }
 
   void _onFocusChange() {
@@ -73,7 +75,8 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final selectedElement = Provider.of<CanvasProvider>(context).selectedElement;
+    final selectedElement =
+        Provider.of<CanvasProvider>(context).selectedElement;
     _updateTextControllers(selectedElement);
   }
 
@@ -87,16 +90,22 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
       }
       if (element is ImageElement || element is RectangleElement) {
         if (!_cornerRadiusFocusNode.hasFocus) {
-          _cornerRadiusController.text = (element as dynamic).cornerRadius.toStringAsFixed(1);
+          _cornerRadiusController.text =
+              (element as dynamic).cornerRadius.toStringAsFixed(1);
         }
       } else {
         _cornerRadiusController.text = '';
       }
 
       if (element is ImageElement) {
-        if (!_borderWidthFocusNode.hasFocus) _borderWidthController.text = element.borderWidth.toStringAsFixed(1);
-      } else if (element is TextElement || element is RectangleElement || element is CircleElement) {
-        if (!_borderWidthFocusNode.hasFocus) _borderWidthController.text = (element as dynamic).outlineWidth.toStringAsFixed(1);
+        if (!_borderWidthFocusNode.hasFocus)
+          _borderWidthController.text = element.borderWidth.toStringAsFixed(1);
+      } else if (element is TextElement ||
+          element is RectangleElement ||
+          element is CircleElement) {
+        if (!_borderWidthFocusNode.hasFocus)
+          _borderWidthController.text =
+              (element as dynamic).outlineWidth.toStringAsFixed(1);
       } else {
         _borderWidthController.text = '';
       }
@@ -105,15 +114,18 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
         _shadowBlurController.text = element.shadowBlurRadius.toStringAsFixed(1);
       }
       if (!_shadowOffsetXFocusNode.hasFocus) {
-        _shadowOffsetXController.text = element.shadowOffset?.dx.toStringAsFixed(0) ?? "0";
+        _shadowOffsetXController.text =
+            element.shadowOffset?.dx.toStringAsFixed(0) ?? "0";
       }
       if (!_shadowOffsetYFocusNode.hasFocus) {
-        _shadowOffsetYController.text = element.shadowOffset?.dy.toStringAsFixed(0) ?? "0";
+        _shadowOffsetYController.text =
+            element.shadowOffset?.dy.toStringAsFixed(0) ?? "0";
       }
 
       if (element is ImageElement) {
         if (!_borderBlurRadiusFocusNode.hasFocus) {
-          _borderBlurRadiusController.text = element.borderBlurRadius.toStringAsFixed(1);
+          _borderBlurRadiusController.text =
+              element.borderBlurRadius.toStringAsFixed(1);
         }
       } else {
         _borderBlurRadiusController.text = '';
@@ -137,7 +149,8 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
 
     final double? newWidth = double.tryParse(_widthController.text);
     if (newWidth != null && newWidth != selectedElement.size.width) {
-      canvasProvider.updateSelectedElementSize(Size(newWidth, selectedElement.size.height));
+      canvasProvider.updateSelectedElementSize(
+          Size(newWidth, selectedElement.size.height));
     } else if (newWidth == null) {
       _widthController.text = selectedElement.size.width.toStringAsFixed(1);
     }
@@ -150,7 +163,8 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
 
     final double? newHeight = double.tryParse(_heightController.text);
     if (newHeight != null && newHeight != selectedElement.size.height) {
-      canvasProvider.updateSelectedElementSize(Size(selectedElement.size.width, newHeight));
+      canvasProvider.updateSelectedElementSize(
+          Size(selectedElement.size.width, newHeight));
     } else if (newHeight == null) {
       _heightController.text = selectedElement.size.height.toStringAsFixed(1);
     }
@@ -159,13 +173,17 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
   void _submitCornerRadius() {
     final canvasProvider = Provider.of<CanvasProvider>(context, listen: false);
     final selectedElement = canvasProvider.selectedElement;
-    if (selectedElement == null || !(selectedElement is ImageElement || selectedElement is RectangleElement)) return;
+    if (selectedElement == null ||
+        !(selectedElement is ImageElement ||
+            selectedElement is RectangleElement)) return;
 
     final double? newRadius = double.tryParse(_cornerRadiusController.text);
-    if (newRadius != null && newRadius != (selectedElement as dynamic).cornerRadius) {
+    if (newRadius != null &&
+        newRadius != (selectedElement as dynamic).cornerRadius) {
       canvasProvider.updateSelectedElementCornerRadius(newRadius);
     } else if (newRadius == null) {
-      _cornerRadiusController.text = (selectedElement as dynamic).cornerRadius.toStringAsFixed(1);
+      _cornerRadiusController.text =
+          (selectedElement as dynamic).cornerRadius.toStringAsFixed(1);
     }
   }
 
@@ -176,17 +194,24 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
 
     final double? newBorderWidth = double.tryParse(_borderWidthController.text);
     if (newBorderWidth != null) {
-      if (selectedElement is ImageElement && newBorderWidth != selectedElement.borderWidth) {
+      if (selectedElement is ImageElement &&
+          newBorderWidth != selectedElement.borderWidth) {
         canvasProvider.updateSelectedElementBorder(borderWidth: newBorderWidth);
-      } else if ((selectedElement is TextElement || selectedElement is RectangleElement || selectedElement is CircleElement) &&
-                 newBorderWidth != (selectedElement as dynamic).outlineWidth) {
+      } else if ((selectedElement is TextElement ||
+              selectedElement is RectangleElement ||
+              selectedElement is CircleElement) &&
+          newBorderWidth != (selectedElement as dynamic).outlineWidth) {
         canvasProvider.updateSelectedElementBorder(outlineWidth: newBorderWidth);
       }
     } else {
       if (selectedElement is ImageElement) {
-        _borderWidthController.text = selectedElement.borderWidth.toStringAsFixed(1);
-      } else if (selectedElement is TextElement || selectedElement is RectangleElement || selectedElement is CircleElement) {
-        _borderWidthController.text = (selectedElement as dynamic).outlineWidth.toStringAsFixed(1);
+        _borderWidthController.text =
+            selectedElement.borderWidth.toStringAsFixed(1);
+      } else if (selectedElement is TextElement ||
+          selectedElement is RectangleElement ||
+          selectedElement is CircleElement) {
+        _borderWidthController.text =
+            (selectedElement as dynamic).outlineWidth.toStringAsFixed(1);
       }
     }
   }
@@ -200,7 +225,8 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
     if (newBlur != null && newBlur != selectedElement.shadowBlurRadius) {
       canvasProvider.updateSelectedElementShadow(shadowBlurRadius: newBlur);
     } else if (newBlur == null) {
-      _shadowBlurController.text = selectedElement.shadowBlurRadius.toStringAsFixed(1);
+      _shadowBlurController.text =
+          selectedElement.shadowBlurRadius.toStringAsFixed(1);
     }
   }
 
@@ -211,10 +237,13 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
 
     final double? newOffsetX = double.tryParse(_shadowOffsetXController.text);
     final currentOffsetY = selectedElement.shadowOffset?.dy ?? 0.0;
-    if (newOffsetX != null && newOffsetX != (selectedElement.shadowOffset?.dx ?? 0.0)) {
-      canvasProvider.updateSelectedElementShadow(shadowOffset: Offset(newOffsetX, currentOffsetY));
+    if (newOffsetX != null &&
+        newOffsetX != (selectedElement.shadowOffset?.dx ?? 0.0)) {
+      canvasProvider.updateSelectedElementShadow(
+          shadowOffset: Offset(newOffsetX, currentOffsetY));
     } else if (newOffsetX == null) {
-      _shadowOffsetXController.text = selectedElement.shadowOffset?.dx.toStringAsFixed(0) ?? "0";
+      _shadowOffsetXController.text =
+          selectedElement.shadowOffset?.dx.toStringAsFixed(0) ?? "0";
     }
   }
 
@@ -225,10 +254,13 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
 
     final double? newOffsetY = double.tryParse(_shadowOffsetYController.text);
     final currentOffsetX = selectedElement.shadowOffset?.dx ?? 0.0;
-    if (newOffsetY != null && newOffsetY != (selectedElement.shadowOffset?.dy ?? 0.0)) {
-      canvasProvider.updateSelectedElementShadow(shadowOffset: Offset(currentOffsetX, newOffsetY));
+    if (newOffsetY != null &&
+        newOffsetY != (selectedElement.shadowOffset?.dy ?? 0.0)) {
+      canvasProvider.updateSelectedElementShadow(
+          shadowOffset: Offset(currentOffsetX, newOffsetY));
     } else if (newOffsetY == null) {
-      _shadowOffsetYController.text = selectedElement.shadowOffset?.dy.toStringAsFixed(0) ?? "0";
+      _shadowOffsetYController.text =
+          selectedElement.shadowOffset?.dy.toStringAsFixed(0) ?? "0";
     }
   }
 
@@ -238,12 +270,15 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
     if (selectedElement == null || selectedElement is! ImageElement) return;
 
     final ImageElement imageElement = selectedElement;
-    final double? newBlurRadius = double.tryParse(_borderBlurRadiusController.text);
+    final double? newBlurRadius =
+        double.tryParse(_borderBlurRadiusController.text);
 
-    if (newBlurRadius != null && newBlurRadius != imageElement.borderBlurRadius) {
+    if (newBlurRadius != null &&
+        newBlurRadius != imageElement.borderBlurRadius) {
       canvasProvider.updateSelectedImageElementBorderBlur(newBlurRadius);
     } else if (newBlurRadius == null) {
-      _borderBlurRadiusController.text = imageElement.borderBlurRadius.toStringAsFixed(1);
+      _borderBlurRadiusController.text =
+          imageElement.borderBlurRadius.toStringAsFixed(1);
     }
   }
 
@@ -257,7 +292,7 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
     _shadowOffsetXController.dispose();
     _shadowOffsetYController.dispose();
     _borderBlurRadiusController.dispose();
-    
+
     _widthFocusNode.removeListener(_onFocusChange);
     _widthFocusNode.dispose();
     _heightFocusNode.removeListener(_onFocusChange);
@@ -274,7 +309,7 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
     _shadowOffsetYFocusNode.dispose();
     _borderBlurRadiusFocusNode.removeListener(_onFocusChange);
     _borderBlurRadiusFocusNode.dispose();
-    
+
     super.dispose();
   }
 
@@ -287,11 +322,18 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
       return const SizedBox.shrink();
     }
 
-    final canvasProviderNoListen = Provider.of<CanvasProvider>(context, listen: false);
+    final canvasProviderNoListen =
+        Provider.of<CanvasProvider>(context, listen: false);
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
     final TextTheme textTheme = Theme.of(context).textTheme;
     bool isLocked = selectedElement.isLocked;
-
+    double cornerRadiusValue = 0.0;
+    if (selectedElement is ImageElement) {
+      cornerRadiusValue = selectedElement.cornerRadius;
+    } else if (selectedElement is RectangleElement) {
+      cornerRadiusValue = selectedElement.cornerRadius;
+    }
+    double maxCornerRadius = selectedElement.size.shortestSide / 2;
     return Container(
       height: _toolbarHeight,
       decoration: BoxDecoration(
@@ -313,7 +355,8 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
           GestureDetector(
             onVerticalDragUpdate: (details) {
               setState(() {
-                _toolbarHeight = (_toolbarHeight - details.delta.dy).clamp(_minToolbarHeight, _maxToolbarHeight);
+                _toolbarHeight = (_toolbarHeight - details.delta.dy)
+                    .clamp(_minToolbarHeight, _maxToolbarHeight);
               });
             },
             child: Container(
@@ -349,69 +392,91 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
                         'Size',
                         Icons.aspect_ratio_rounded,
                         [
-                          _buildTextFieldProperty(
-                            context, "W", _widthController, _widthFocusNode, 
-                            isLocked, _submitWidth, colorScheme, textTheme, width: 55
-                          ),
+                          _buildTextFieldProperty(context, "W",
+                              _widthController, _widthFocusNode, isLocked,
+                              _submitWidth, colorScheme, textTheme,
+                              width: 55),
                           const SizedBox(width: 8),
-                          _buildTextFieldProperty(
-                            context, "H", _heightController, _heightFocusNode, 
-                            isLocked, _submitHeight, colorScheme, textTheme, width: 55
-                          ),
+                          _buildTextFieldProperty(context, "H",
+                              _heightController, _heightFocusNode, isLocked,
+                              _submitHeight, colorScheme, textTheme,
+                              width: 55),
                         ],
                       ),
-
-                      if (selectedElement is ImageElement || selectedElement is RectangleElement) ...[
+                      if (selectedElement is ImageElement ||
+                          selectedElement is RectangleElement) ...[
                         _buildDivider(colorScheme),
                         _buildSection(
                           'Corner',
                           Icons.rounded_corner,
                           [
-                            _buildTextFieldProperty(
-                              context, "R", _cornerRadiusController, _cornerRadiusFocusNode, 
-                              isLocked, _submitCornerRadius, colorScheme, textTheme, width: 55
+                            _buildSliderWithTextFieldProperty(
+                              context,
+                              "R",
+                              _cornerRadiusController,
+                              _cornerRadiusFocusNode,
+                              isLocked,
+                              _submitCornerRadius,
+                              cornerRadiusValue,
+                              maxCornerRadius,
+                              (value) {
+                                canvasProviderNoListen
+                                    .updateSelectedElementCornerRadius(value);
+                              },
+                              colorScheme,
+                              textTheme,
                             ),
                           ],
                         ),
                       ],
-
                       _buildDivider(colorScheme),
-
                       _buildSection(
                         'Transform',
                         Icons.transform,
                         [
-                          _buildSliderProperty(
-                            context, 'Opacity', selectedElement.opacity, 
-                            '${(selectedElement.opacity * 100).toStringAsFixed(0)}%',
-                            min: 0.0, max: 1.0, divisions: 20, isLocked: isLocked,
-                            onChanged: (value) => canvasProviderNoListen.updateSelectedElementOpacity(value),
-                            colorScheme: colorScheme, textTheme: textTheme
-                          ),
+                          _buildSliderProperty(context, 'Opacity',
+                              selectedElement.opacity,
+                              '${(selectedElement.opacity * 100).toStringAsFixed(0)}%',
+                              min: 0.0,
+                              max: 1.0,
+                              divisions: 20,
+                              isLocked: isLocked,
+                              onChanged: (value) => canvasProviderNoListen
+                                  .updateSelectedElementOpacity(value),
+                              colorScheme: colorScheme,
+                              textTheme: textTheme),
                           const SizedBox(width: 12),
-                          _buildSliderProperty(
-                            context, 'Rotation', 
-                            (selectedElement.rotation * (180 / 3.1415926535)).clamp(-180.0, 180.0), 
-                            '${(selectedElement.rotation * (180 / 3.1415926535)).toStringAsFixed(0)}°',
-                            min: -180.0, max: 180.0, divisions: 360, isLocked: isLocked,
-                            onChanged: (degrees) => canvasProviderNoListen.updateSelectedElementRotation(degrees),
-                            colorScheme: colorScheme, textTheme: textTheme
-                          ),
+                          _buildSliderProperty(context, 'Rotation',
+                              (selectedElement.rotation * (180 / 3.1415926535))
+                                  .clamp(-180.0, 180.0),
+                              '${(selectedElement.rotation * (180 / 3.1415926535)).toStringAsFixed(0)}°',
+                              min: -180.0,
+                              max: 180.0,
+                              divisions: 360,
+                              isLocked: isLocked,
+                              onChanged: (degrees) => canvasProviderNoListen
+                                  .updateSelectedElementRotation(degrees),
+                              colorScheme: colorScheme,
+                              textTheme: textTheme),
                         ],
                       ),
-
                       _buildDivider(colorScheme),
-
                       _buildSection(
                         'Actions',
                         Icons.build_rounded,
                         [
                           _buildActionButton(
                             context,
-                            icon: selectedElement.isLocked ? Icons.lock : Icons.lock_open_rounded,
-                            tooltip: selectedElement.isLocked ? 'Unlock' : 'Lock',
-                            color: selectedElement.isLocked ? colorScheme.primary : colorScheme.onSurfaceVariant,
-                            onPressed: () => canvasProviderNoListen.toggleLockSelectedElement(),
+                            icon: selectedElement.isLocked
+                                ? Icons.lock
+                                : Icons.lock_open_rounded,
+                            tooltip:
+                                selectedElement.isLocked ? 'Unlock' : 'Lock',
+                            color: selectedElement.isLocked
+                                ? colorScheme.primary
+                                : colorScheme.onSurfaceVariant,
+                            onPressed: () => canvasProviderNoListen
+                                .toggleLockSelectedElement(),
                           ),
                           const SizedBox(width: 8),
                           _buildActionButton(
@@ -419,63 +484,75 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
                             icon: Icons.delete_outline_rounded,
                             tooltip: 'Delete',
                             color: colorScheme.error,
-                            onPressed: () => canvasProviderNoListen.deleteElement(selectedElement),
+                            onPressed: () => canvasProviderNoListen
+                                .deleteElement(selectedElement),
                           ),
                         ],
                       ),
-
-                      if (selectedElement is ImageElement || selectedElement is TextElement || 
-                          selectedElement is RectangleElement || selectedElement is CircleElement) ...[
+                      if (selectedElement is ImageElement ||
+                          selectedElement is TextElement ||
+                          selectedElement is RectangleElement ||
+                          selectedElement is CircleElement) ...[
                         _buildDivider(colorScheme),
                         _buildSection(
                           'Border',
                           Icons.border_all_rounded,
                           [
-                            _buildTextFieldProperty(
-                              context, "Width", _borderWidthController, _borderWidthFocusNode, 
-                              isLocked, _submitBorderWidth, colorScheme, textTheme, width: 55
-                            ),
+                            _buildTextFieldProperty(context, "Width",
+                                _borderWidthController, _borderWidthFocusNode,
+                                isLocked, _submitBorderWidth, colorScheme,
+                                textTheme,
+                                width: 55),
                             if (selectedElement is ImageElement) ...[
                               const SizedBox(width: 8),
                               _buildTextFieldProperty(
-                                context, "Blur", _borderBlurRadiusController, _borderBlurRadiusFocusNode, 
-                                isLocked, _submitBorderBlurRadius, colorScheme, textTheme, width: 55
-                              ),
+                                  context,
+                                  "Blur",
+                                  _borderBlurRadiusController,
+                                  _borderBlurRadiusFocusNode,
+                                  isLocked,
+                                  _submitBorderBlurRadius,
+                                  colorScheme,
+                                  textTheme,
+                                  width: 55),
                             ],
                             const SizedBox(width: 12),
-                            _buildBorderColorButtons(context, canvasProviderNoListen, selectedElement, isLocked, colorScheme),
+                            _buildBorderColorButtons(context,
+                                canvasProviderNoListen, selectedElement,
+                                isLocked, colorScheme),
                           ],
                         ),
                       ],
-
                       _buildDivider(colorScheme),
-
                       _buildSection(
                         'Shadow',
                         Icons.blur_on_rounded,
                         [
-                          _buildTextFieldProperty(
-                            context, "Blur", _shadowBlurController, _shadowBlurFocusNode, 
-                            isLocked, _submitShadowBlur, colorScheme, textTheme, width: 55
-                          ),
+                          _buildTextFieldProperty(context, "Blur",
+                              _shadowBlurController, _shadowBlurFocusNode,
+                              isLocked, _submitShadowBlur, colorScheme,
+                              textTheme,
+                              width: 55),
                           const SizedBox(width: 8),
-                          _buildTextFieldProperty(
-                            context, "X", _shadowOffsetXController, _shadowOffsetXFocusNode, 
-                            isLocked, _submitShadowOffsetX, colorScheme, textTheme, width: 50
-                          ),
+                          _buildTextFieldProperty(context, "X",
+                              _shadowOffsetXController,
+                              _shadowOffsetXFocusNode, isLocked,
+                              _submitShadowOffsetX, colorScheme, textTheme,
+                              width: 50),
                           const SizedBox(width: 8),
-                          _buildTextFieldProperty(
-                            context, "Y", _shadowOffsetYController, _shadowOffsetYFocusNode, 
-                            isLocked, _submitShadowOffsetY, colorScheme, textTheme, width: 50
-                          ),
+                          _buildTextFieldProperty(context, "Y",
+                              _shadowOffsetYController,
+                              _shadowOffsetYFocusNode, isLocked,
+                              _submitShadowOffsetY, colorScheme, textTheme,
+                              width: 50),
                           const SizedBox(width: 12),
-                          _buildShadowColorButtons(context, canvasProviderNoListen, selectedElement, isLocked, colorScheme),
+                          _buildShadowColorButtons(context,
+                              canvasProviderNoListen, selectedElement,
+                              isLocked, colorScheme),
                         ],
                       ),
-
                       const SizedBox(width: 16),
-                    ],
-                  ),
+                    ]),
               ),
             ),
           ),
@@ -487,7 +564,7 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
   Widget _buildSection(String title, IconData icon, List<Widget> children) {
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Column(
@@ -530,14 +607,15 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
     );
   }
 
-  Widget _buildActionButton(BuildContext context, {
+  Widget _buildActionButton(
+    BuildContext context, {
     required IconData icon,
     required String tooltip,
     required Color color,
     required VoidCallback onPressed,
   }) {
     final colorScheme = Theme.of(context).colorScheme;
-    
+
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(8),
@@ -558,17 +636,23 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
     );
   }
 
-  Widget _buildSliderProperty(BuildContext context, String label, double value, String displayValue, {
-    required double min, required double max, required int divisions, required bool isLocked, 
-    required ValueChanged<double> onChanged, required ColorScheme colorScheme, required TextTheme textTheme
-  }) {
+  Widget _buildSliderProperty(
+      BuildContext context, String label, double value, String displayValue,
+      {required double min,
+      required double max,
+      required int divisions,
+      required bool isLocked,
+      required ValueChanged<double> onChanged,
+      required ColorScheme colorScheme,
+      required TextTheme textTheme}) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(
-          '$label: $displayValue', 
-          style: textTheme.bodySmall?.copyWith(fontSize: 9, color: colorScheme.onSurfaceVariant),
+          '$label: $displayValue',
+          style: textTheme.bodySmall
+              ?.copyWith(fontSize: 9, color: colorScheme.onSurfaceVariant),
         ),
         const SizedBox(height: 2),
         SizedBox(
@@ -595,15 +679,23 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
     );
   }
 
-  Widget _buildTextFieldProperty(BuildContext context, String label, TextEditingController controller, 
-      FocusNode focusNode, bool isLocked, VoidCallback onSubmit, ColorScheme colorScheme, 
-      TextTheme textTheme, {double width = 60}) {
+  Widget _buildTextFieldProperty(
+      BuildContext context,
+      String label,
+      TextEditingController controller,
+      FocusNode focusNode,
+      bool isLocked,
+      VoidCallback onSubmit,
+      ColorScheme colorScheme,
+      TextTheme textTheme,
+      {double width = 60}) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
           label,
-          style: textTheme.bodySmall?.copyWith(fontSize: 9, color: colorScheme.onSurfaceVariant),
+          style: textTheme.bodySmall
+              ?.copyWith(fontSize: 9, color: colorScheme.onSurfaceVariant),
         ),
         const SizedBox(height: 2),
         Container(
@@ -612,17 +704,23 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(6),
             border: Border.all(color: colorScheme.outline.withOpacity(0.3)),
-            color: isLocked ? colorScheme.surfaceContainerHighest.withOpacity(0.3) : colorScheme.surface,
+            color: isLocked
+                ? colorScheme.surfaceContainerHighest.withOpacity(0.3)
+                : colorScheme.surface,
           ),
           child: TextField(
             controller: controller,
             focusNode: focusNode,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+            keyboardType:
+                const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))
+            ],
             textAlign: TextAlign.center,
             decoration: InputDecoration(
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
               isDense: true,
             ),
             style: textTheme.bodySmall?.copyWith(fontSize: 11),
@@ -634,8 +732,21 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
     );
   }
 
-  Widget _buildBorderColorButtons(BuildContext context, CanvasProvider canvasProvider, CanvasElement element, bool isLocked, ColorScheme colorScheme) {
-    List<Color?> presetColors = [null, Colors.black, Colors.white, Colors.red, Colors.blue, Colors.green, Colors.orange];
+  Widget _buildBorderColorButtons(
+      BuildContext context,
+      CanvasProvider canvasProvider,
+      CanvasElement element,
+      bool isLocked,
+      ColorScheme colorScheme) {
+    List<Color?> presetColors = [
+      null,
+      Colors.black,
+      Colors.white,
+      Colors.red,
+      Colors.blue,
+      Colors.green,
+      Colors.orange
+    ];
     Color? currentColor;
 
     if (element is ImageElement) {
@@ -651,18 +762,25 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
     return Wrap(
       spacing: 4,
       children: presetColors.map((Color? color) {
-        bool isSelected = (color == null && currentColor == null) || (color != null && currentColor == color);
-        
+        bool isSelected = (color == null && currentColor == null) ||
+            (color != null && currentColor == color);
+
         return Tooltip(
           message: color == null ? "Clear Border" : "Set Border Color",
           child: GestureDetector(
-            onTap: isLocked ? null : () {
-              if (element is ImageElement) {
-                canvasProvider.updateSelectedElementBorder(borderColor: color, borderColorGetter: () => color);
-              } else if (element is TextElement || element is RectangleElement || element is CircleElement) {
-                canvasProvider.updateSelectedElementBorder(outlineColor: color, outlineColorGetter: () => color);
-              }
-            },
+            onTap: isLocked
+                ? null
+                : () {
+                    if (element is ImageElement) {
+                      canvasProvider.updateSelectedElementBorder(
+                          borderColor: color, borderColorGetter: () => color);
+                    } else if (element is TextElement ||
+                        element is RectangleElement ||
+                        element is CircleElement) {
+                      canvasProvider.updateSelectedElementBorder(
+                          outlineColor: color, outlineColorGetter: () => color);
+                    }
+                  },
             child: Container(
               width: 22,
               height: 22,
@@ -670,18 +788,23 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
                 color: color ?? colorScheme.surface,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? colorScheme.primary : colorScheme.outline.withOpacity(0.5),
-                  width: isSelected ? 2 : 1
-                ),
-                boxShadow: isSelected ? [
-                  BoxShadow(
-                    color: colorScheme.primary.withOpacity(0.3), 
-                    blurRadius: 3, 
-                    spreadRadius: 0.5
-                  )
-                ] : [],
+                    color: isSelected
+                        ? colorScheme.primary
+                        : colorScheme.outline.withOpacity(0.5),
+                    width: isSelected ? 2 : 1),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                            color: colorScheme.primary.withOpacity(0.3),
+                            blurRadius: 3,
+                            spreadRadius: 0.5)
+                      ]
+                    : [],
               ),
-              child: color == null ? Icon(Icons.clear, size: 10, color: colorScheme.onSurfaceVariant) : null,
+              child: color == null
+                  ? Icon(Icons.clear,
+                      size: 10, color: colorScheme.onSurfaceVariant)
+                  : null,
             ),
           ),
         );
@@ -689,21 +812,36 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
     );
   }
 
-  Widget _buildShadowColorButtons(BuildContext context, CanvasProvider canvasProvider, CanvasElement element, bool isLocked, ColorScheme colorScheme) {
-    List<Color?> presetColors = [null, Colors.black54, Colors.black26, Colors.blueGrey, Colors.deepPurple.withOpacity(0.6)];
+  Widget _buildShadowColorButtons(
+      BuildContext context,
+      CanvasProvider canvasProvider,
+      CanvasElement element,
+      bool isLocked,
+      ColorScheme colorScheme) {
+    List<Color?> presetColors = [
+      null,
+      Colors.black54,
+      Colors.black26,
+      Colors.blueGrey,
+      Colors.deepPurple.withOpacity(0.6)
+    ];
     Color? currentColor = element.shadowColor;
 
     return Wrap(
       spacing: 4,
       children: presetColors.map((Color? color) {
-        bool isSelected = currentColor == color || (color == null && currentColor == null);
+        bool isSelected =
+            currentColor == color || (color == null && currentColor == null);
 
         return Tooltip(
           message: color == null ? "Clear Shadow" : "Set Shadow Color",
           child: GestureDetector(
-            onTap: isLocked ? null : () {
-              canvasProvider.updateSelectedElementShadow(shadowColor: color, shadowColorGetter: () => color);
-            },
+            onTap: isLocked
+                ? null
+                : () {
+                    canvasProvider.updateSelectedElementShadow(
+                        shadowColor: color, shadowColorGetter: () => color);
+                  },
             child: Container(
               width: 22,
               height: 22,
@@ -711,22 +849,69 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
                 color: color ?? colorScheme.surface,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? colorScheme.primary : colorScheme.outline.withOpacity(0.5),
-                  width: isSelected ? 2 : 1
-                ),
-                boxShadow: isSelected ? [
-                  BoxShadow(
-                    color: colorScheme.primary.withOpacity(0.3), 
-                    blurRadius: 3, 
-                    spreadRadius: 0.5
-                  )
-                ] : [],
+                    color: isSelected
+                        ? colorScheme.primary
+                        : colorScheme.outline.withOpacity(0.5),
+                    width: isSelected ? 2 : 1),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                            color: colorScheme.primary.withOpacity(0.3),
+                            blurRadius: 3,
+                            spreadRadius: 0.5)
+                      ]
+                    : [],
               ),
-              child: color == null ? Icon(Icons.clear, size: 10, color: colorScheme.onSurfaceVariant) : null,
+              child: color == null
+                  ? Icon(Icons.clear,
+                      size: 10, color: colorScheme.onSurfaceVariant)
+                  : null,
             ),
           ),
         );
       }).toList(),
+    );
+  }
+
+  Widget _buildSliderWithTextFieldProperty(
+    BuildContext context,
+    String label,
+    TextEditingController controller,
+    FocusNode focusNode,
+    bool isLocked,
+    VoidCallback onSubmit,
+    double value,
+    double max,
+    ValueChanged<double> onChanged,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 120,
+          child: Slider(
+            value: value,
+            min: 0,
+            max: max,
+            onChanged: isLocked ? null : onChanged,
+            activeColor: colorScheme.primary,
+            inactiveColor: colorScheme.onSurface.withOpacity(0.2),
+          ),
+        ),
+        const SizedBox(width: 8),
+        _buildTextFieldProperty(
+          context,
+          label,
+          controller,
+          focusNode,
+          isLocked,
+          onSubmit,
+          colorScheme,
+          textTheme,
+          width: 55,
+        ),
+      ],
     );
   }
 }
