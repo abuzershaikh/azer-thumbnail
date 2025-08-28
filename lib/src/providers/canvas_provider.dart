@@ -194,7 +194,11 @@ class CanvasProvider with ChangeNotifier {
     if (isCanvasLocked) return;
     _saveStateForUndo();
     const Offset defaultPosition = Offset(100, 100);
-    final newElement = ImageElement(id: _uuid.v4(), imagePath: imagePath, position: defaultPosition, size: imageSize);
+    
+    // Scale down the image by a factor of 10.
+    final newSize = Size(imageSize.width / 10, imageSize.height / 10);
+
+    final newElement = ImageElement(id: _uuid.v4(), imagePath: imagePath, position: defaultPosition, size: newSize);
     _elements.add(newElement);
     selectElement(newElement);
   }
