@@ -297,14 +297,14 @@ class _BottomPropertiesToolbarState extends State<BottomPropertiesToolbar> {
       decoration: BoxDecoration(
         color: colorScheme.surface,
         border: Border(
-          top: BorderSide(color: colorScheme.outline.withOpacity(0.2), width: 1),
+          bottom: BorderSide(color: colorScheme.outline.withOpacity(0.2), width: 1),
         ),
         boxShadow: [
           BoxShadow(
             color: colorScheme.shadow.withOpacity(0.1),
             spreadRadius: 0,
             blurRadius: 8,
-            offset: const Offset(0, -2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),

@@ -1,3 +1,4 @@
+// Forcing a re-compile to try and fix a build issue.
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -22,7 +23,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final TransformationController _transformationController = TransformationController();
   final GlobalKey _canvasKey = GlobalKey();
 
   CanvasElement? _initialDragElement;
@@ -31,15 +31,12 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _transformationController.addListener(() {
-      final newZoom = _transformationController.value.getMaxScaleOnAxis();
-      Provider.of<CanvasProvider>(context, listen: false).setZoomLevel(newZoom);
-    });
+    // Set a fixed zoom level since InteractiveViewer is removed.
+    Provider.of<CanvasProvider>(context, listen: false).setZoomLevel(1.0);
   }
 
   @override
   void dispose() {
-    _transformationController.dispose();
     super.dispose();
   }
 
@@ -47,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // ... (existing export code)
     try {
       if (!mounted || _canvasKey.currentContext == null) {
-         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error: Canvas not ready.')));
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error: Canvas not ready.')));
         return;
       }
       RenderRepaintBoundary boundary = _canvasKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
@@ -100,8 +97,8 @@ class _HomeScreenState extends State<HomeScreen> {
         if (!mounted) return; 
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Project saved to: $outputFile')));
       } else {
-         if (!mounted) return; 
-         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Save project cancelled.')));
+        if (!mounted) return; 
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Save project cancelled.')));
       }
     } catch (e) {
       if (!mounted) return; 
@@ -125,12 +122,12 @@ class _HomeScreenState extends State<HomeScreen> {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Project loaded from: $path')));
       } else {
-         if (!mounted) return;
-         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Load project cancelled.')));
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Load project cancelled.')));
       }
     } catch (e) {
-       if (!mounted) return;
-       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error loading project: ${e.toString()}')));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error loading project: ${e.toString()}')));
     }
   }
 
@@ -627,75 +624,52 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(icon: const Icon(Icons.save_rounded), tooltip: 'Save Project', onPressed: _saveProject),
           IconButton(icon: const Icon(Icons.ios_share_rounded), tooltip: 'Export as PNG', onPressed: _exportCanvasAsPng),
           const VerticalDivider(width: 20, thickness: 1, indent: 12, endIndent: 12),
-          IconButton(icon: const Icon(Icons.zoom_out_rounded), tooltip: 'Zoom Out', onPressed: () {
-              const double scaleFactor = 1.2;
-              final currentZoomVal = _transformationController.value.getMaxScaleOnAxis();
-              double newScale = (currentZoomVal / scaleFactor).clamp(0.05, 10.0);
-              _transformationController.value = Matrix4.identity()..scale(newScale);
-            },
-          ),
-          IconButton(icon: const Icon(Icons.zoom_in_rounded), tooltip: 'Zoom In', onPressed: () {
-              const double scaleFactor = 1.2;
-              final currentZoomVal = _transformationController.value.getMaxScaleOnAxis();
-              double newScale = (currentZoomVal * scaleFactor).clamp(0.05, 10.0);
-              _transformationController.value = Matrix4.identity()..scale(newScale);
-            },
-          ),
           const SizedBox(width: 8),
         ],
       ),
       body: Column(
         children: [
+          const BottomPropertiesToolbar(),
           Expanded(
             child: Row(
               children: [
                 const LeftToolbar(),
                 Expanded(
                   child: Container(
+                    padding: const EdgeInsets.all(48.0), // Add some padding around the canvas
                     color: colorScheme.surfaceContainerLow, // Use a theme-aware background
-                    child: InteractiveViewer(
-                      transformationController: _transformationController,
-                      constrained: false,
-                      boundaryMargin: const EdgeInsets.all(double.infinity),
-                      minScale: 0.05,
-                      maxScale: 10.0,
-                      onInteractionEnd: (details) {
-                         Provider.of<CanvasProvider>(context, listen: false).setZoomLevel(_transformationController.value.getMaxScaleOnAxis());
-                      },
-                      child: Center(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.vertical,
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
                         child: RepaintBoundary(
                           key: _canvasKey,
                           child: Container(
                             width: 1280,
-                            height: 720,
+                            height: 400,
                             clipBehavior: Clip.hardEdge,
                             decoration: BoxDecoration(
-                              // Background color is now handled by the first layer of the Stack below
-                              border: Border.all(color: Colors.black54, width: 1.0 / currentCanvasZoom),
+                              border: Border.all(color: Colors.black54, width: 1.0), // Fixed border
                             ),
-                            child: Stack( // New Stack for background and elements
+                            child: Stack(
                               fit: StackFit.expand,
                               children: [
-                                // Background Image Layer
+                                // Background Layer
                                 Consumer<CanvasProvider>(
                                   builder: (context, provider, child) {
                                     String? bgImagePath = provider.backgroundImagePathValue;
                                     BoxFit? bgFit = provider.backgroundFitValue;
                                     if (bgImagePath != null) {
-                                      File imageFile = File(bgImagePath);
                                       return Image.file(
-                                        imageFile,
+                                        File(bgImagePath),
                                         width: 1280,
-                                        height: 720,
-                                        fit: bgFit ?? BoxFit.contain, // Default fit
+                                        height: 400, // <-- Also changed here to match canvas
+                                        fit: bgFit ?? BoxFit.contain,
                                         errorBuilder: (context, error, stackTrace) {
-                                          // On error, fallback to background color
-                                          // print("Error loading background image: $error"); // REMOVED
                                           return Container(color: provider.backgroundColor);
                                         },
                                       );
                                     } else {
-                                      // No background image, just use background color
                                       return Container(color: provider.backgroundColor);
                                     }
                                   },
@@ -722,7 +696,6 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 70, child: ClipRect(child: BottomPropertiesToolbar())), // Add the new toolbar here
         ],
       ),
     );
