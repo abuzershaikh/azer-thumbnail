@@ -40,6 +40,17 @@ class CanvasProvider with ChangeNotifier {
   final List<_CanvasStateSnapshot> _redoStack = [];
   static const int _maxHistoryStack = 30;
 
+  bool _isCanvasLocked = false;
+  bool get isCanvasLocked => _isCanvasLocked;
+
+  void toggleCanvasLock() {
+    _isCanvasLocked = !_isCanvasLocked;
+    if (_isCanvasLocked) {
+      selectElement(null);
+    }
+    notifyListeners();
+  }
+
   Color get backgroundColor => _backgroundColor;
   String? get backgroundImagePathValue => backgroundImagePath; // Getter for UI
   BoxFit? get backgroundFitValue => backgroundFit; // Getter for UI
@@ -66,6 +77,7 @@ class CanvasProvider with ChangeNotifier {
   }
 
   void _saveStateForUndo() {
+    if (isCanvasLocked) return;
     if (_undoStack.length >= _maxHistoryStack && _undoStack.isNotEmpty) {
       _undoStack.removeAt(0);
     }
@@ -75,7 +87,7 @@ class CanvasProvider with ChangeNotifier {
   }
 
   void undo() {
-    if (!canUndo) return;
+    if (!canUndo || isCanvasLocked) return;
     _redoStack.add(_CanvasStateSnapshot.deepCopy(List.from(_elements), _backgroundColor, backgroundImagePath, backgroundFit));
     final lastState = _undoStack.removeLast();
     _elements = List.from(lastState.elements);
@@ -87,7 +99,7 @@ class CanvasProvider with ChangeNotifier {
   }
 
   void redo() {
-    if (!canRedo) return;
+    if (!canRedo || isCanvasLocked) return;
     _undoStack.add(_CanvasStateSnapshot.deepCopy(List.from(_elements), _backgroundColor, backgroundImagePath, backgroundFit));
     final nextState = _redoStack.removeLast();
     _elements = List.from(nextState.elements);
@@ -99,6 +111,7 @@ class CanvasProvider with ChangeNotifier {
   }
 
   Future<void> saveProject(String filePath) async {
+    if (isCanvasLocked) return;
     try {
       final projectData = {
         'backgroundColor': _backgroundColor.value,
@@ -115,6 +128,7 @@ class CanvasProvider with ChangeNotifier {
   }
 
   Future<void> loadProject(String filePath) async {
+    if (isCanvasLocked) return;
     try {
       final String jsonString = await File(filePath).readAsString();
       final Map<String, dynamic> projectData = jsonDecode(jsonString);
@@ -177,6 +191,7 @@ class CanvasProvider with ChangeNotifier {
   }
 
   void addImageElement(String imagePath, Size imageSize) {
+    if (isCanvasLocked) return;
     _saveStateForUndo();
     const Offset defaultPosition = Offset(100, 100);
     final newElement = ImageElement(id: _uuid.v4(), imagePath: imagePath, position: defaultPosition, size: imageSize);
@@ -185,6 +200,7 @@ class CanvasProvider with ChangeNotifier {
   }
 
   void addTextElement(String text, TextStyle initialStyle, Offset position) {
+    if (isCanvasLocked) return;
     _saveStateForUndo();
     final Size calculatedSize = _calculateTextSize(text, initialStyle);
     final newElement = TextElement(id: _uuid.v4(), text: text, position: position, style: initialStyle, size: calculatedSize);
@@ -193,6 +209,7 @@ class CanvasProvider with ChangeNotifier {
   }
 
   void addRectangleElement() {
+    if (isCanvasLocked) return;
     _saveStateForUndo();
     const defaultSize = Size(200, 100);
     const defaultPosition = Offset(150, 150);
@@ -202,6 +219,7 @@ class CanvasProvider with ChangeNotifier {
   }
 
   void addCircleElement() {
+    if (isCanvasLocked) return;
     _saveStateForUndo();
     const defaultRadius = 50.0;
     const defaultPosition = Offset(200, 200);
@@ -211,6 +229,7 @@ class CanvasProvider with ChangeNotifier {
   }
 
   void updateElement(CanvasElement updatedElementFromToolbar) {
+    if (isCanvasLocked) return;
     final index = _elements.indexWhere((e) => e.id == updatedElementFromToolbar.id);
     if (index == -1) return;
 
@@ -242,6 +261,7 @@ class CanvasProvider with ChangeNotifier {
   }
 
   void selectElement(CanvasElement? element) {
+    if (isCanvasLocked) return;
     if (_selectedElement != element) {
       _selectedElement = element;
       notifyListeners();
@@ -249,7 +269,7 @@ class CanvasProvider with ChangeNotifier {
   }
 
   void toggleElementLock() {
-    if (_selectedElement == null) return;
+    if (isCanvasLocked || _selectedElement == null) return;
     _saveStateForUndo();
 
     final index = _elements.indexWhere((e) => e.id == _selectedElement!.id);
@@ -265,7 +285,7 @@ class CanvasProvider with ChangeNotifier {
   }
 
   void bringToFront() {
-    if (_selectedElement == null || _elements.length < 2) return;
+    if (isCanvasLocked || _selectedElement == null || _elements.length < 2) return;
     if (_selectedElement!.isLocked) return; // Cannot reorder locked element
     final index = _elements.indexWhere((e) => e.id == _selectedElement!.id);
     if (index != -1 && index < _elements.length - 1) {
@@ -277,7 +297,7 @@ class CanvasProvider with ChangeNotifier {
   }
 
   void sendToBack() {
-    if (_selectedElement == null || _elements.length < 2) return;
+    if (isCanvasLocked || _selectedElement == null || _elements.length < 2) return;
     if (_selectedElement!.isLocked) return;
     final index = _elements.indexWhere((e) => e.id == _selectedElement!.id);
     if (index > 0) {
@@ -289,7 +309,7 @@ class CanvasProvider with ChangeNotifier {
   }
 
   void bringForward() {
-    if (_selectedElement == null || _elements.length < 2) return;
+    if (isCanvasLocked || _selectedElement == null || _elements.length < 2) return;
     if (_selectedElement!.isLocked) return;
     final index = _elements.indexWhere((e) => e.id == _selectedElement!.id);
     if (index != -1 && index < _elements.length - 1) {
@@ -301,7 +321,7 @@ class CanvasProvider with ChangeNotifier {
   }
 
   void sendBackward() {
-    if (_selectedElement == null || _elements.length < 2) return;
+    if (isCanvasLocked || _selectedElement == null || _elements.length < 2) return;
     if (_selectedElement!.isLocked) return;
     final index = _elements.indexWhere((e) => e.id == _selectedElement!.id);
     if (index > 0) {
@@ -315,7 +335,7 @@ class CanvasProvider with ChangeNotifier {
   _CanvasStateSnapshot? _preGestureState;
 
   void onElementGestureStart(CanvasElement element) {
-    if (element.isLocked) return; // Do not initiate gesture if element is locked
+    if (isCanvasLocked || element.isLocked) return; // Do not initiate gesture if element is locked
 
     if (_selectedElement != element) {
       selectElement(element);
@@ -339,6 +359,29 @@ class CanvasProvider with ChangeNotifier {
     double newScale = _initialScale * details.scale;
     currentElement.scale = newScale;
     currentElement.rotation = _initialRotation + details.rotation;
+    notifyListeners();
+  }
+
+  void updateElementPosition(Offset delta) {
+    if (_selectedElement == null || _selectedElement!.isLocked) return;
+
+    final newPosition = _selectedElement!.position + delta;
+    final double canvasWidth = 1280;
+    final double canvasHeight = 720;
+
+    // Get the bounding box of the transformed element
+    final Rect elementRect = Rect.fromLTWH(
+      newPosition.dx,
+      newPosition.dy,
+      _selectedElement!.size.width * _selectedElement!.scale,
+      _selectedElement!.size.height * _selectedElement!.scale,
+    );
+
+    // Clamp the position
+    final double clampedX = newPosition.dx.clamp(0, canvasWidth - elementRect.width);
+    final double clampedY = newPosition.dy.clamp(0, canvasHeight - elementRect.height);
+
+    _selectedElement!.position = Offset(clampedX, clampedY);
     notifyListeners();
   }
 

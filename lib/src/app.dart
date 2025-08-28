@@ -12,10 +12,18 @@ class App extends StatelessWidget {
       create: (context) => CanvasProvider(),
       child: MaterialApp(
         title: 'Thumbnail Maker',
+        themeMode: ThemeMode.system, // Use system theme (light/dark)
         theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-          visualDensity: VisualDensity.standard,
+          brightness: Brightness.light,
+          colorSchemeSeed: Colors.blue, // Seed color for light theme
           useMaterial3: true,
+          fontFamily: 'Roboto', // Example font
+        ),
+        darkTheme: ThemeData(
+          brightness: Brightness.dark,
+          colorSchemeSeed: Colors.blue, // Seed color for dark theme
+          useMaterial3: true,
+          fontFamily: 'Roboto', // Example font
         ),
         debugShowCheckedModeBanner: false,
         home: const HomeScreen(),

@@ -13,9 +13,20 @@ class RightToolbar extends StatefulWidget {
   State<RightToolbar> createState() => _RightToolbarState();
 }
 
-class _RightToolbarState extends State<RightToolbar> {
+class _RightToolbarState extends State<RightToolbar> with TickerProviderStateMixin {
   final TextEditingController _textEditingController = TextEditingController();
   Key _textFormFieldKey = UniqueKey();
+  
+  // Expansion states for color sections
+  bool _showFontColors = false;
+  bool _showBackgroundColors = false;
+  bool _showOutlineColors = false;
+  bool _showShapeFillColors = false;
+  bool _showShapeOutlineColors = false;
+  
+  // Expansion states for main sections
+  bool _canvasToolsExpanded = true;
+  bool _selectedElementExpanded = true;
 
   @override
   void dispose() {
@@ -46,7 +57,7 @@ class _RightToolbarState extends State<RightToolbar> {
     double? outlineWidthDelta,
   }) {
     if (element.isLocked) {
-       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Element is locked."), duration: Duration(milliseconds: 1200)));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Element is locked."), duration: Duration(milliseconds: 1200)));
       return;
     }
     TextStyle newStyle = element.style;
@@ -79,7 +90,7 @@ class _RightToolbarState extends State<RightToolbar> {
     Color? outlineColor,
     bool clearOutlineColor = false,
     double? outlineWidthDelta,
-    Size? newSize // Not used for MVP outline/fill, but kept for signature consistency
+    Size? newSize
   }) {
     if (element.isLocked) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Element is locked."), duration: Duration(milliseconds: 1200)));
@@ -94,25 +105,24 @@ class _RightToolbarState extends State<RightToolbar> {
       newOutlineWidth = (newOutlineWidth + outlineWidthDelta).clamp(0.0, 20.0);
     }
 
-     if (element is RectangleElement) {
-        provider.updateElement(element.copyWith(
-          color: fillColor ?? element.color,
-          outlineColorGetter: clearOutlineColor ? () => null : null,
-          outlineColor: clearOutlineColor ? null : (outlineColor ?? element.outlineColor),
-          outlineWidth: newOutlineWidth,
-          size: newSize ?? element.size
-        ));
-     } else if (element is CircleElement) {
-        provider.updateElement(element.copyWith(
-          color: fillColor ?? element.color,
-          outlineColorGetter: clearOutlineColor ? () => null : null,
-          outlineColor: clearOutlineColor ? null : (outlineColor ?? element.outlineColor),
-          outlineWidth: newOutlineWidth,
-          radius: newSize != null ? newSize.width / 2 : element.radius // Keep radius update logic if newSize is passed
-        ));
-     }
+    if (element is RectangleElement) {
+      provider.updateElement(element.copyWith(
+        color: fillColor ?? element.color,
+        outlineColorGetter: clearOutlineColor ? () => null : null,
+        outlineColor: clearOutlineColor ? null : (outlineColor ?? element.outlineColor),
+        outlineWidth: newOutlineWidth,
+        size: newSize ?? element.size
+      ));
+    } else if (element is CircleElement) {
+      provider.updateElement(element.copyWith(
+        color: fillColor ?? element.color,
+        outlineColorGetter: clearOutlineColor ? () => null : null,
+        outlineColor: clearOutlineColor ? null : (outlineColor ?? element.outlineColor),
+        outlineWidth: newOutlineWidth,
+        radius: newSize != null ? newSize.width / 2 : element.radius
+      ));
+    }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -137,151 +147,680 @@ class _RightToolbarState extends State<RightToolbar> {
           _textEditingController.text = selectedElement.text;
           _textFormFieldKey = UniqueKey();
         } else if (selectedElement == null || selectedElement is! TextElement) {
-           _textEditingController.clear();
+          _textEditingController.clear();
         }
 
         return Container(
-          width: 230,
-          color: colorScheme.surfaceContainerLow, // Updated background color
-          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 16.0),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text('Canvas Tools', textAlign: TextAlign.center, style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 10),
-                _buildCanvasTools(context, canvasProviderNoListen, colorScheme),
-
-                const Divider(height: 30, thickness: 1.5),
-
-                Text('Selected Element', textAlign: TextAlign.center, style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 12),
-                if (selectedElement == null)
-                  const Center(child: Text('No element selected.', textAlign: TextAlign.center,))
-                else ...[
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(child: Text('ID: ${selectedElement.id.substring(0,6)}...', style: textTheme.bodySmall, overflow: TextOverflow.ellipsis)),
-                      IconButton(
-                        icon: Icon(selectedElement.isLocked ? Icons.lock : Icons.lock_open),
-                        tooltip: selectedElement.isLocked ? 'Unlock Element' : 'Lock Element',
-                        onPressed: () {
-                          canvasProviderNoListen.toggleElementLock();
-                        },
-                        color: selectedElement.isLocked ? Colors.orangeAccent[700] : colorScheme.onSurfaceVariant, // Updated color
-                      ),
-                    ],
+          width: 260,
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            border: Border(
+              left: BorderSide(color: colorScheme.outline.withOpacity(0.2), width: 1),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: colorScheme.shadow.withOpacity(0.08),
+                spreadRadius: 0,
+                blurRadius: 8,
+                offset: const Offset(-2, 0),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: colorScheme.primaryContainer.withOpacity(0.3),
+                  border: Border(
+                    bottom: BorderSide(color: colorScheme.outline.withOpacity(0.2)),
                   ),
-                  const SizedBox(height: 4),
-                  _buildLayerControls(context, canvasProviderNoListen, canBringForward, canSendBackward, isElementLocked, textTheme), // Pass textTheme
-                  const SizedBox(height: 10),
-                  _buildPropertyRow('Type:', selectedElement.type.toString().split('.').last, textTheme),
-                  _buildPropertyRow('Scale:', _formatDouble(selectedElement.scale), textTheme),
-                  _buildPropertyRow('Rotation:', '${_formatDouble(selectedElement.rotation * 180 / math.pi, places: 1)}°', textTheme),
-                  _buildPropertyRow('X:', _formatDouble(selectedElement.position.dx, places: 1), textTheme),
-                  _buildPropertyRow('Y:', _formatDouble(selectedElement.position.dy, places: 1), textTheme),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.tune_rounded, color: colorScheme.primary, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Properties Panel',
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              // Scrollable Content
+              Expanded(
+                child: Scrollbar(
+                  thumbVisibility: true,
+                  trackVisibility: true,
+                  thickness: 6,
+                  radius: const Radius.circular(3),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Canvas Tools Section
+                        _buildExpandableSection(
+                          'Canvas Tools',
+                          Icons.dashboard_rounded,
+                          _canvasToolsExpanded,
+                          (expanded) => setState(() => _canvasToolsExpanded = expanded),
+                          _buildCanvasTools(context, canvasProviderNoListen, colorScheme, textTheme),
+                          colorScheme,
+                          textTheme,
+                        ),
 
-                  if (selectedElement is ImageElement) ..._buildImageSpecificProperties(selectedElement, isElementLocked, textTheme),
-                  if (selectedElement is TextElement) ..._buildTextSpecificProperties(context, canvasProviderNoListen, selectedElement, isElementLocked, colorScheme, textTheme),
-                  if (selectedElement is RectangleElement) ..._buildShapeProperties(context, canvasProviderNoListen, selectedElement, isElementLocked, colorScheme, textTheme, isRect: true),
-                  if (selectedElement is CircleElement) ..._buildShapeProperties(context, canvasProviderNoListen, selectedElement, isElementLocked, colorScheme, textTheme, isRect: false),
+                        const SizedBox(height: 16),
 
-                  const SizedBox(height: 16),
-                  Center(
-                    child: FilledButton.tonal( // Changed to FilledButton.tonal
-                      onPressed: () => canvasProviderNoListen.selectElement(null),
-                      child: const Text('Deselect'),
+                        // Selected Element Section
+                        _buildExpandableSection(
+                          'Selected Element',
+                          selectedElement == null ? Icons.select_all_rounded : _getElementIcon(selectedElement),
+                          _selectedElementExpanded,
+                          (expanded) => setState(() => _selectedElementExpanded = expanded),
+                          selectedElement == null
+                              ? _buildNoSelectionWidget(colorScheme, textTheme)
+                              : _buildSelectedElementContent(
+                                  context, 
+                                  canvasProviderNoListen, 
+                                  selectedElement, 
+                                  canBringForward, 
+                                  canSendBackward, 
+                                  isElementLocked, 
+                                  colorScheme, 
+                                  textTheme
+                                ),
+                          colorScheme,
+                          textTheme,
+                        ),
+                      ],
                     ),
                   ),
-                ]
-              ],
-            ),
+                ),
+              ),
+            ],
           ),
         );
       },
     );
   }
 
-  Widget _buildLayerControls(BuildContext context, CanvasProvider provider, bool canBringForward, bool canSendBackward, bool isLocked, TextTheme textTheme) { // Add textTheme
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Layering:', style: textTheme.titleSmall),
-        const SizedBox(height: 4),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
+  IconData _getElementIcon(CanvasElement element) {
+    if (element is TextElement) return Icons.text_fields_rounded;
+    if (element is ImageElement) return Icons.image_rounded;
+    if (element is RectangleElement) return Icons.rectangle_rounded;
+    if (element is CircleElement) return Icons.circle_rounded;
+    return Icons.layers_rounded;
+  }
+
+  Widget _buildExpandableSection(
+    String title,
+    IconData icon,
+    bool isExpanded,
+    Function(bool) onChanged,
+    Widget content,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
+        color: colorScheme.surfaceContainerLowest,
+      ),
+      child: Column(
+        children: [
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              onTap: () => onChanged(!isExpanded),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: colorScheme.surfaceContainerHigh.withOpacity(0.5),
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(icon, size: 18, color: colorScheme.primary),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                    AnimatedRotation(
+                      turns: isExpanded ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            height: isExpanded ? null : 0,
+            child: isExpanded
+                ? Container(
+                    padding: const EdgeInsets.all(12),
+                    child: content,
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoSelectionWidget(ColorScheme colorScheme, TextTheme textTheme) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
           children: [
-            IconButton(icon: const Icon(Icons.vertical_align_bottom), tooltip: 'Send to Back', onPressed: canSendBackward ? provider.sendToBack : null),
-            IconButton(icon: const Icon(Icons.keyboard_arrow_down), tooltip: 'Send Backward', onPressed: canSendBackward ? provider.sendBackward : null),
-            IconButton(icon: const Icon(Icons.keyboard_arrow_up), tooltip: 'Bring Forward', onPressed: canBringForward ? provider.bringForward : null),
-            IconButton(icon: const Icon(Icons.vertical_align_top), tooltip: 'Bring to Front', onPressed: canBringForward ? provider.bringToFront : null),
+            Icon(
+              Icons.touch_app_rounded,
+              size: 48,
+              color: colorScheme.onSurfaceVariant.withOpacity(0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No element selected',
+              style: textTheme.bodyLarge?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Select an element on the canvas to see its properties',
+              textAlign: TextAlign.center,
+              style: textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant.withOpacity(0.7),
+              ),
+            ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSelectedElementContent(
+    BuildContext context,
+    CanvasProvider provider,
+    CanvasElement selectedElement,
+    bool canBringForward,
+    bool canSendBackward,
+    bool isElementLocked,
+    ColorScheme colorScheme,
+    TextTheme textTheme,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Element Info Card
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: colorScheme.primaryContainer.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Icon(_getElementIcon(selectedElement), size: 16, color: colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'ID: ${selectedElement.id.substring(0, 8)}...',
+                      style: textTheme.bodySmall?.copyWith(fontFamily: 'monospace'),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: selectedElement.isLocked ? colorScheme.errorContainer : colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          selectedElement.isLocked ? Icons.lock : Icons.lock_open_rounded,
+                          size: 12,
+                          color: selectedElement.isLocked ? colorScheme.onErrorContainer : colorScheme.onPrimaryContainer,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          selectedElement.isLocked ? 'Locked' : 'Unlocked',
+                          style: textTheme.bodySmall?.copyWith(
+                            fontSize: 10,
+                            color: selectedElement.isLocked ? colorScheme.onErrorContainer : colorScheme.onPrimaryContainer,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: Icon(selectedElement.isLocked ? Icons.lock : Icons.lock_open_rounded),
+                    tooltip: selectedElement.isLocked ? 'Unlock Element' : 'Lock Element',
+                    onPressed: () => provider.toggleElementLock(),
+                    color: selectedElement.isLocked ? colorScheme.error : colorScheme.primary,
+                    iconSize: 18,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Layer Controls
+        _buildLayerControls(context, provider, canBringForward, canSendBackward, isElementLocked, colorScheme, textTheme),
+
+        const SizedBox(height: 16),
+
+        // Properties
+        _buildPropertiesGrid(selectedElement, textTheme, colorScheme),
+
+        const SizedBox(height: 16),
+
+        // Element-specific properties
+        if (selectedElement is ImageElement) 
+          ..._buildImageSpecificProperties(selectedElement, isElementLocked, textTheme, colorScheme),
+        if (selectedElement is TextElement) 
+          ..._buildTextSpecificProperties(context, provider, selectedElement, isElementLocked, colorScheme, textTheme),
+        if (selectedElement is RectangleElement) 
+          ..._buildShapeProperties(context, provider, selectedElement, isElementLocked, colorScheme, textTheme, isRect: true),
+        if (selectedElement is CircleElement) 
+          ..._buildShapeProperties(context, provider, selectedElement, isElementLocked, colorScheme, textTheme, isRect: false),
+
+        const SizedBox(height: 20),
+
+        // Deselect Button
+        FilledButton.tonalIcon(
+          onPressed: () => provider.selectElement(null),
+          icon: const Icon(Icons.deselect_rounded, size: 18),
+          label: const Text('Deselect Element'),
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+          ),
         ),
       ],
     );
   }
 
-  List<Widget> _buildImageSpecificProperties(ImageElement element, bool isLocked, TextTheme textTheme) {
-     return [
-      _buildPropertyRow('File:', _getFileName(element.imagePath), textTheme, overflow: TextOverflow.ellipsis),
-      _buildPropertyRow('Orig. W:', '${_formatDouble(element.size.width, places: 0)}px', textTheme),
-      _buildPropertyRow('Orig. H:', '${_formatDouble(element.size.height, places: 0)}px', textTheme),
-      _buildPropertyRow('Disp. W:', '${_formatDouble(element.size.width * element.scale, places: 1)}px', textTheme),
-      _buildPropertyRow('Disp. H:', '${_formatDouble(element.size.height * element.scale, places: 1)}px', textTheme),
+  Widget _buildPropertiesGrid(CanvasElement element, TextTheme textTheme, ColorScheme colorScheme) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.info_outline_rounded, size: 14, color: colorScheme.primary),
+              const SizedBox(width: 6),
+              Text(
+                'Properties',
+                style: textTheme.labelMedium?.copyWith(
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _buildPropertyRow('Type', element.type.toString().split('.').last, textTheme, colorScheme),
+          _buildPropertyRow('Scale', _formatDouble(element.scale), textTheme, colorScheme),
+          _buildPropertyRow('Rotation', '${_formatDouble(element.rotation * 180 / math.pi, places: 1)}°', textTheme, colorScheme),
+          _buildPropertyRow('X Position', _formatDouble(element.position.dx, places: 1), textTheme, colorScheme),
+          _buildPropertyRow('Y Position', _formatDouble(element.position.dy, places: 1), textTheme, colorScheme),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLayerControls(BuildContext context, CanvasProvider provider, bool canBringForward, bool canSendBackward, bool isLocked, ColorScheme colorScheme, TextTheme textTheme) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHigh.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.layers_rounded, size: 14, color: colorScheme.primary),
+              const SizedBox(width: 6),
+              Text(
+                'Layer Controls',
+                style: textTheme.labelMedium?.copyWith(
+                  color: colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildLayerButton(
+                context,
+                icon: Icons.vertical_align_bottom_rounded,
+                tooltip: 'Send to Back',
+                onPressed: canSendBackward ? provider.sendToBack : null,
+                colorScheme: colorScheme,
+              ),
+              _buildLayerButton(
+                context,
+                icon: Icons.keyboard_arrow_down_rounded,
+                tooltip: 'Send Backward',
+                onPressed: canSendBackward ? provider.sendBackward : null,
+                colorScheme: colorScheme,
+              ),
+              _buildLayerButton(
+                context,
+                icon: Icons.keyboard_arrow_up_rounded,
+                tooltip: 'Bring Forward',
+                onPressed: canBringForward ? provider.bringForward : null,
+                colorScheme: colorScheme,
+              ),
+              _buildLayerButton(
+                context,
+                icon: Icons.vertical_align_top_rounded,
+                tooltip: 'Bring to Front',
+                onPressed: canBringForward ? provider.bringToFront : null,
+                colorScheme: colorScheme,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLayerButton(BuildContext context, {
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback? onPressed,
+    required ColorScheme colorScheme,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: onPressed != null ? colorScheme.primaryContainer.withOpacity(0.5) : colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: onPressed != null ? colorScheme.primary.withOpacity(0.3) : colorScheme.outline.withOpacity(0.2),
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: onPressed,
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            child: Icon(
+              icon,
+              size: 20,
+              color: onPressed != null ? colorScheme.primary : colorScheme.onSurfaceVariant.withOpacity(0.5),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildImageSpecificProperties(ImageElement element, bool isLocked, TextTheme textTheme, ColorScheme colorScheme) {
+    return [
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHigh.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.image_rounded, size: 14, color: colorScheme.primary),
+                const SizedBox(width: 6),
+                Text(
+                  'Image Properties',
+                  style: textTheme.labelMedium?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            _buildPropertyRow('File', _getFileName(element.imagePath), textTheme, colorScheme, overflow: TextOverflow.ellipsis),
+            _buildPropertyRow('Original Width', '${_formatDouble(element.size.width, places: 0)}px', textTheme, colorScheme),
+            _buildPropertyRow('Original Height', '${_formatDouble(element.size.height, places: 0)}px', textTheme, colorScheme),
+            _buildPropertyRow('Display Width', '${_formatDouble(element.size.width * element.scale, places: 1)}px', textTheme, colorScheme),
+            _buildPropertyRow('Display Height', '${_formatDouble(element.size.height * element.scale, places: 1)}px', textTheme, colorScheme),
+          ],
+        ),
+      ),
     ];
   }
 
   List<Widget> _buildTextSpecificProperties(BuildContext context, CanvasProvider provider, TextElement element, bool isLocked, ColorScheme colorScheme, TextTheme textTheme) {
     return [
-      const SizedBox(height: 8),
-      TextFormField(
-        key: _textFormFieldKey,
-        initialValue: element.text,
-        enabled: !isLocked,
-        decoration: const InputDecoration(labelText: 'Text Content', border: OutlineInputBorder(), isDense: true),
-        onChanged: (newText) {
-           if(!isLocked) _updateTextElement(provider, element, text: newText);
-        },
+      // Text Content
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHigh.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.text_fields_rounded, size: 14, color: colorScheme.primary),
+                const SizedBox(width: 6),
+                Text(
+                  'Text Properties',
+                  style: textTheme.labelMedium?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              key: _textFormFieldKey,
+              initialValue: element.text,
+              enabled: !isLocked,
+              maxLines: 3,
+              decoration: InputDecoration(
+                labelText: 'Text Content',
+                border: const OutlineInputBorder(),
+                isDense: true,
+                filled: true,
+                fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+              ),
+              onChanged: (newText) {
+                if (!isLocked) _updateTextElement(provider, element, text: newText);
+              },
+            ),
+            const SizedBox(height: 12),
+            
+            // Font Size Controls
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Font Size: ${_formatDouble(element.style.fontSize ?? 0, places: 0)}pt',
+                    style: textTheme.bodyMedium,
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove_rounded, size: 18),
+                        tooltip: "Decrease font size",
+                        onPressed: isLocked ? null : () => _updateTextElement(provider, element, fontSizeDelta: -2),
+                        padding: const EdgeInsets.all(4),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add_rounded, size: 18),
+                        tooltip: "Increase font size",
+                        onPressed: isLocked ? null : () => _updateTextElement(provider, element, fontSizeDelta: 2),
+                        padding: const EdgeInsets.all(4),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Font Color Section
+            _buildColorSection(
+              'Font Color',
+              Icons.format_color_text_rounded,
+              _showFontColors,
+              (show) => setState(() => _showFontColors = show),
+              [Colors.black, Colors.white, Colors.red, Colors.blue, Colors.green, Colors.orange],
+              (color) => _updateTextElement(provider, element, color: color),
+              element.style.color ?? Colors.black,
+              isLocked,
+              colorScheme,
+              textTheme,
+            ),
+            
+            const SizedBox(height: 12),
+            
+            // Background Color Section
+            _buildColorSection(
+              'Background Color',
+              Icons.format_color_fill_rounded,
+              _showBackgroundColors,
+              (show) => setState(() => _showBackgroundColors = show),
+              [Colors.transparent, Colors.yellowAccent, Colors.lightBlueAccent, colorScheme.surfaceContainerHighest],
+              (color) => _updateTextElement(
+                provider, 
+                element, 
+                textBackgroundColor: color == Colors.transparent ? null : color,
+                clearTextBackgroundColor: color == Colors.transparent,
+              ) as TextElement,
+              element.textBackgroundColor ?? Colors.transparent,
+              isLocked,
+              colorScheme,
+              textTheme,
+              allowTransparent: true,
+            ),
+            
+            const SizedBox(height: 12),
+            
+            // Outline Color Section
+            _buildColorSection(
+              'Outline Color',
+              Icons.border_color_rounded,
+              _showOutlineColors,
+              (show) => setState(() => _showOutlineColors = show),
+              [Colors.transparent, Colors.black, Colors.white, Colors.red, Colors.blue],
+              (color) => _updateTextElement(
+                provider, 
+                element, 
+                outlineColor: color == Colors.transparent ? null : color,
+                clearOutlineColor: color == Colors.transparent,
+              ) as TextElement,
+              element.outlineColor ?? Colors.transparent,
+              isLocked,
+              colorScheme,
+              textTheme,
+              allowTransparent: true,
+            ),
+            
+            const SizedBox(height: 12),
+            
+            // Outline Width Controls
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Outline Width: ${_formatDouble(element.outlineWidth, places: 1)}pt',
+                    style: textTheme.bodyMedium,
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove_rounded, size: 18),
+                        tooltip: "Decrease outline width",
+                        onPressed: isLocked ? null : () => _updateTextElement(provider, element, outlineWidthDelta: -0.5),
+                        padding: const EdgeInsets.all(4),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add_rounded, size: 18),
+                        tooltip: "Increase outline width",
+                        onPressed: isLocked ? null : () => _updateTextElement(provider, element, outlineWidthDelta: 0.5),
+                        padding: const EdgeInsets.all(4),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 12),
+            _buildPropertyRow('Box Width', '${_formatDouble(element.size.width * element.scale, places: 1)}px', textTheme, colorScheme),
+            _buildPropertyRow('Box Height', '${_formatDouble(element.size.height * element.scale, places: 1)}px', textTheme, colorScheme),
+          ],
+        ),
       ),
-      const SizedBox(height: 10),
-      _buildPropertyRow('Font Size:', _formatDouble(element.style.fontSize ?? 0, places: 0), textTheme),
-      Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-        IconButton(icon: const Icon(Icons.remove), tooltip: "Decrease font size", onPressed: isLocked ? null : () => _updateTextElement(provider, element, fontSizeDelta: -2)),
-        IconButton(icon: const Icon(Icons.add), tooltip: "Increase font size", onPressed: isLocked ? null : () => _updateTextElement(provider, element, fontSizeDelta: 2)),
-      ]),
-      const SizedBox(height: 8),
-      Text('Font Color:', style: textTheme.bodyMedium),
-      Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-        _colorButton(context, provider, element, Colors.black, colorScheme, isTextFontColor: true, isLocked: isLocked),
-        _colorButton(context, provider, element, Colors.red, colorScheme, isTextFontColor: true, isLocked: isLocked),
-        _colorButton(context, provider, element, Colors.white, colorScheme, isTextFontColor: true, isLocked: isLocked),
-        _colorButton(context, provider, element, Colors.blue, colorScheme, isTextFontColor: true, isLocked: isLocked),
-      ]),
-      const SizedBox(height: 10),
-      Text('Background Color:', style: textTheme.bodyMedium),
-      Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-        _colorButton(context, provider, element, Colors.transparent, colorScheme, isTextBg: true, clearColor: true, isLocked: isLocked),
-        _colorButton(context, provider, element, Colors.yellowAccent, colorScheme, isTextBg: true, isLocked: isLocked),
-        _colorButton(context, provider, element, Colors.lightBlueAccent, colorScheme, isTextBg: true, isLocked: isLocked),
-        _colorButton(context, provider, element, colorScheme.surfaceContainerHighest, colorScheme, isTextBg: true, isLocked: isLocked), // Use colorScheme
-      ]),
-       const SizedBox(height: 10),
-      Text('Outline Color:', style: textTheme.bodyMedium),
-       Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-        _colorButton(context, provider, element, Colors.transparent, colorScheme, isOutline: true, clearColor: true, isLocked: isLocked),
-        _colorButton(context, provider, element, Colors.black, colorScheme, isOutline: true, isLocked: isLocked),
-        _colorButton(context, provider, element, Colors.white, colorScheme, isOutline: true, isLocked: isLocked),
-        _colorButton(context, provider, element, Colors.red, colorScheme, isOutline: true, isLocked: isLocked),
-      ]),
-      const SizedBox(height: 8),
-      _buildPropertyRow('Outline Width:', _formatDouble(element.outlineWidth, places: 1), textTheme),
-      Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-        IconButton(icon: const Icon(Icons.remove), tooltip: "Decrease outline width", onPressed: isLocked ? null : () => _updateTextElement(provider, element, outlineWidthDelta: -0.5)),
-        IconButton(icon: const Icon(Icons.add), tooltip: "Increase outline width", onPressed: isLocked ? null : () => _updateTextElement(provider, element, outlineWidthDelta: 0.5)),
-      ]),
-      _buildPropertyRow('Box W:', '${_formatDouble(element.size.width * element.scale, places: 1)}px', textTheme),
-      _buildPropertyRow('Box H:', '${_formatDouble(element.size.height* element.scale, places: 1)}px', textTheme),
     ];
   }
 
@@ -301,190 +840,489 @@ class _RightToolbarState extends State<RightToolbar> {
     }
 
     return [
-      const SizedBox(height: 8),
-      Text('Fill Color:', style: textTheme.bodyMedium),
-      Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-        _colorButton(context, provider, element, Colors.blue, colorScheme, isLocked: isLocked, isShapeFill: true),
-        _colorButton(context, provider, element, Colors.green, colorScheme, isLocked: isLocked, isShapeFill: true),
-        _colorButton(context, provider, element, Colors.yellow, colorScheme, isLocked: isLocked, isShapeFill: true),
-        _colorButton(context, provider, element, Colors.orange, colorScheme, isLocked: isLocked, isShapeFill: true),
-      ]),
-      const SizedBox(height: 10),
-      Text('Outline Color:', style: textTheme.bodyMedium),
-       Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-        _colorButton(context, provider, element, Colors.transparent, colorScheme, isShapeOutline: true, clearColor: true, isLocked: isLocked),
-        _colorButton(context, provider, element, Colors.black, colorScheme, isShapeOutline: true, isLocked: isLocked),
-        _colorButton(context, provider, element, Colors.white, colorScheme, isShapeOutline: true, isLocked: isLocked),
-        _colorButton(context, provider, element, Colors.red, colorScheme, isShapeOutline: true, isLocked: isLocked),
-      ]),
-      const SizedBox(height: 8),
-      _buildPropertyRow('Outline Width:', _formatDouble(currentOutlineWidth, places: 1), textTheme),
-      Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-        IconButton(icon: const Icon(Icons.remove), tooltip: "Decrease outline width", onPressed: isLocked ? null : () => _updateShapeElement(provider, element, outlineWidthDelta: -0.5)),
-        IconButton(icon: const Icon(Icons.add), tooltip: "Increase outline width", onPressed: isLocked ? null : () => _updateShapeElement(provider, element, outlineWidthDelta: 0.5)),
-      ]),
-      if (isRect && element is RectangleElement) ...[
-         _buildPropertyRow('Base W:', '${_formatDouble(element.size.width, places: 1)}px', textTheme),
-         _buildPropertyRow('Base H:', '${_formatDouble(element.size.height, places: 1)}px', textTheme),
-      ] else if (!isRect && element is CircleElement) ...[
-        _buildPropertyRow('Radius:', '${_formatDouble(element.radius, places: 1)}px', textTheme),
-      ]
+      Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: colorScheme.surfaceContainerHigh.withOpacity(0.3),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  isRect ? Icons.rectangle_rounded : Icons.circle_rounded, 
+                  size: 14, 
+                  color: colorScheme.primary
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '${isRect ? 'Rectangle' : 'Circle'} Properties',
+                  style: textTheme.labelMedium?.copyWith(
+                    color: colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            
+            // Fill Color Section
+            _buildColorSection(
+              'Fill Color',
+              Icons.format_color_fill_rounded,
+              _showShapeFillColors,
+              (show) => setState(() => _showShapeFillColors = show),
+              [Colors.blue, Colors.green, Colors.yellow, Colors.orange, Colors.red, Colors.purple],
+              (color) => _updateShapeElement(provider, element, fillColor: color),
+              currentFillColor,
+              isLocked,
+              colorScheme,
+              textTheme,
+            ),
+            
+            const SizedBox(height: 12),
+            
+            // Outline Color Section
+            _buildColorSection(
+              'Outline Color',
+              Icons.border_color_rounded,
+              _showShapeOutlineColors,
+              (show) => setState(() => _showShapeOutlineColors = show),
+              [Colors.transparent, Colors.black, Colors.white, Colors.red, Colors.blue],
+              (color) => _updateShapeElement(
+                provider, 
+                element, 
+                outlineColor: color == Colors.transparent ? null : color,
+                clearOutlineColor: color == Colors.transparent,
+              ) as CanvasElement,
+              currentOutlineColor ?? Colors.transparent,
+              isLocked, // Pass isLocked here
+              colorScheme,
+              textTheme,
+              allowTransparent: true,
+            ),
+            
+            const SizedBox(height: 12),
+            
+            // Outline Width Controls
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Outline Width: ${_formatDouble(currentOutlineWidth, places: 1)}pt',
+                    style: textTheme.bodyMedium,
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    color: colorScheme.primaryContainer.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove_rounded, size: 18),
+                        tooltip: "Decrease outline width",
+                        onPressed: isLocked ? null : () => _updateShapeElement(provider, element, outlineWidthDelta: -0.5),
+                        padding: const EdgeInsets.all(4),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add_rounded, size: 18),
+                        tooltip: "Increase outline width",
+                        onPressed: isLocked ? null : () => _updateShapeElement(provider, element, outlineWidthDelta: 0.5),
+                        padding: const EdgeInsets.all(4),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 12),
+            
+            if (isRect && element is RectangleElement) ...[
+              _buildPropertyRow('Base Width', '${_formatDouble(element.size.width, places: 1)}px', textTheme, colorScheme),
+              _buildPropertyRow('Base Height', '${_formatDouble(element.size.height, places: 1)}px', textTheme, colorScheme),
+            ] else if (!isRect && element is CircleElement) ...[
+              _buildPropertyRow('Radius', '${_formatDouble(element.radius, places: 1)}px', textTheme, colorScheme),
+            ],
+          ],
+        ),
+      ),
     ];
   }
 
-  Widget _buildPropertyRow(String label, String value, TextTheme textTheme, {TextOverflow overflow = TextOverflow.clip}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3.0),
-      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text(label, style: textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)), // Updated style
-        const SizedBox(width: 8),
-        Expanded(child: Text(value, textAlign: TextAlign.right, style: textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500), overflow: overflow)), // Updated style
-      ]),
-    );
-  }
-
-  Widget _colorButton(BuildContext context, CanvasProvider provider, CanvasElement element, Color color, ColorScheme colorScheme, {
-    bool isTextFontColor = false, bool isLocked = false,
-    bool isTextBg = false, bool isOutline = false,
-    bool isShapeFill = false, bool isShapeOutline = false,
-    bool clearColor = false
+  Widget _buildColorSection(
+    String title,
+    IconData icon,
+    bool isExpanded,
+    Function(bool) onToggle,
+    List<Color> colors,
+    Function(Color) onColorSelected,
+    Color currentColor,
+    bool isLocked,
+    ColorScheme colorScheme,
+    TextTheme textTheme, {
+    bool allowTransparent = false,
   }) {
-    bool isSelectedColor = false;
-    Color? actualColorToCompare;
-
-    if (isTextFontColor && element is TextElement) {
-      actualColorToCompare = element.style.color;
-    } else if (isTextBg && element is TextElement) actualColorToCompare = element.textBackgroundColor;
-    else if (isOutline && element is TextElement) actualColorToCompare = element.outlineColor;
-    else if (isShapeFill && element is RectangleElement) actualColorToCompare = element.color;
-    else if (isShapeFill && element is CircleElement) actualColorToCompare = element.color;
-    else if (isShapeOutline && element is RectangleElement) actualColorToCompare = element.outlineColor;
-    else if (isShapeOutline && element is CircleElement) actualColorToCompare = element.outlineColor;
-
-    isSelectedColor = clearColor ? actualColorToCompare == null : actualColorToCompare == color;
-
-    return InkWell(
-      onTap: isLocked ? null : () {
-        if (element is TextElement) {
-           _updateTextElement(provider, element,
-            color: isTextFontColor ? color : null,
-            textBackgroundColor: isTextBg && !clearColor ? color : null,
-            clearTextBackgroundColor: isTextBg && clearColor,
-            outlineColor: isOutline && !clearColor ? color : null,
-            clearOutlineColor: isOutline && clearColor,
-           );
-        } else if (element is RectangleElement || element is CircleElement) {
-          _updateShapeElement(provider, element,
-            fillColor: isShapeFill ? color : null,
-            outlineColor: isShapeOutline && !clearColor ? color : null,
-            clearOutlineColor: isShapeOutline && clearColor
-          );
-        }
-      },
-      child: Opacity(
-        opacity: isLocked && !isSelectedColor ? 0.5 : 1.0,
-        child: Container(
-          width: 28, height: 28,
-          margin: const EdgeInsets.symmetric(horizontal: 2),
-          decoration: BoxDecoration(
-            color: clearColor ? colorScheme.surfaceContainerHighest : color, // Updated clear color
-            shape: BoxShape.circle,
-            border: Border.all(color: colorScheme.outlineVariant, width: (color == Colors.white || isSelectedColor) ? 2 : 0.5), // Updated border color
-            boxShadow: isSelectedColor ? [const BoxShadow(color: Colors.black26, blurRadius: 4, spreadRadius: 1)] : [],
+    return Container(
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerHighest.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
+      ),
+      child: Column(
+        children: [
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => onToggle(!isExpanded),
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Row(
+                  children: [
+                    Icon(icon, size: 14, color: colorScheme.onSurfaceVariant),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    // Current color preview
+                    Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: currentColor == Colors.transparent ? colorScheme.surface : currentColor,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: colorScheme.outline.withOpacity(0.5)),
+                      ),
+                      child: currentColor == Colors.transparent 
+                          ? Icon(Icons.clear, size: 12, color: colorScheme.onSurfaceVariant)
+                          : null,
+                    ),
+                    const SizedBox(width: 8),
+                    AnimatedRotation(
+                      turns: isExpanded ? 0.5 : 0,
+                      duration: const Duration(milliseconds: 200),
+                      child: Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        size: 16,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
-           child: clearColor && actualColorToCompare == null ? Icon(Icons.check, color: colorScheme.onSurfaceVariant, size: 16) // Updated icon color
-                 : (isSelectedColor && !clearColor ? Icon(Icons.check, color: color.computeLuminance() > 0.5 ? Colors.black : Colors.white, size: 16) : null),
-        ),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            height: isExpanded ? null : 0,
+            child: isExpanded
+                ? Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: colors.map((color) {
+                        bool isSelected = (allowTransparent && color == Colors.transparent && currentColor == Colors.transparent) ||
+                                         (!allowTransparent && color == currentColor) ||
+                                         (color == currentColor);
+                        
+                        return GestureDetector(
+                          onTap: isLocked ? null : () => onColorSelected(color),
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: color == Colors.transparent ? colorScheme.surface : color,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: isSelected ? colorScheme.primary : colorScheme.outline.withOpacity(0.5),
+                                width: isSelected ? 2.5 : 1,
+                              ),
+                              boxShadow: isSelected ? [
+                                BoxShadow(
+                                  color: colorScheme.primary.withOpacity(0.3),
+                                  blurRadius: 4,
+                                  spreadRadius: 0.5,
+                                )
+                              ] : [],
+                            ),
+                            child: color == Colors.transparent 
+                                ? Icon(Icons.clear, size: 16, color: colorScheme.onSurfaceVariant)
+                                : isSelected 
+                                    ? Icon(
+                                        Icons.check,
+                                        size: 16,
+                                        color: color.computeLuminance() > 0.5 ? Colors.black : Colors.white,
+                                      )
+                                    : null,
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
       ),
     );
   }
 
-   Widget _buildCanvasTools(BuildContext context, CanvasProvider canvasProviderNoListen, ColorScheme colorScheme) {
-    final TextTheme textTheme = Theme.of(context).textTheme;
+  Widget _buildPropertyRow(String label, String value, TextTheme textTheme, ColorScheme colorScheme, {TextOverflow overflow = TextOverflow.clip}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
+              fontSize: 11,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w500,
+                fontSize: 11,
+                fontFamily: 'monospace',
+              ),
+              overflow: overflow,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCanvasTools(BuildContext context, CanvasProvider canvasProviderNoListen, ColorScheme colorScheme, TextTheme textTheme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Background:', style: textTheme.titleSmall),
-        const SizedBox(height: 4),
-        FilledButton.tonal(onPressed: () => canvasProviderNoListen.changeBackgroundColor(Colors.white), child: const Text('White')),
-        FilledButton.tonal(onPressed: () => canvasProviderNoListen.changeBackgroundColor(colorScheme.surfaceContainerLow), child: const Text('Theme Aware Grey')),
-        FilledButton.tonal(onPressed: () => canvasProviderNoListen.changeBackgroundColor(Colors.black), child: const Text('Black')),
-        FilledButton.tonal(onPressed: () => canvasProviderNoListen.changeBackgroundColor(Colors.red.shade100), child: const Text('Light Red')),
-
-        const SizedBox(height: 12),
-        Text('Background Image:', style: textTheme.titleSmall),
-        const SizedBox(height: 4),
-        FilledButton.tonal( // Changed to FilledButton.tonal
-          onPressed: () async {
-            FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.image);
-            if (result != null && result.files.single.path != null) {
-              String imagePath = result.files.single.path!;
-              BoxFit currentFit = Provider.of<CanvasProvider>(context, listen: false).backgroundFitValue ?? BoxFit.contain;
-              Provider.of<CanvasProvider>(context, listen: false).setBackgroundImage(imagePath, currentFit);
-            }
-          },
-          child: const Text('Set Image'),
-        ),
-        Consumer<CanvasProvider>( 
-          builder: (context, provider, child) {
-            return FilledButton.tonal( // Changed to FilledButton.tonal
-              onPressed: provider.backgroundImagePathValue != null
-                  ? () {
-                      Provider.of<CanvasProvider>(context, listen: false).setBackgroundImage(null, null);
-                    }
-                  : null,
-              style: provider.backgroundImagePathValue != null 
-                   ? FilledButton.styleFrom(backgroundColor: colorScheme.errorContainer, foregroundColor: colorScheme.onErrorContainer) 
-                   : null,
-              child: const Text('Clear Image'),
-            );
-          }
-        ),
-        Consumer<CanvasProvider>( // Consumer for Dropdown visibility and value
-          builder: (context, provider, child) {
-            if (provider.backgroundImagePathValue != null) {
-              return Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: DropdownButtonFormField<BoxFit>(
-                  value: provider.backgroundFitValue ?? BoxFit.contain,
-                  hint: const Text("Fit"),
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: "Image Fit",
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        // Background Color Section
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHigh.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.palette_rounded, size: 14, color: colorScheme.primary),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Background',
+                    style: textTheme.labelMedium?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                  items: BoxFit.values.map((BoxFit fit) {
-                    return DropdownMenuItem<BoxFit>(
-                      value: fit,
-                      child: Text(fit.name),
-                    );
-                  }).toList(),
-                  onChanged: (BoxFit? newValue) {
-                    if (newValue != null) {
-                      Provider.of<CanvasProvider>(context, listen: false).setBackgroundImage(
-                        provider.backgroundImagePathValue!,
-                        newValue,
-                      );
-                    }
-                  },
-                ),
-              );
-            } else {
-              return const SizedBox.shrink();
-            }
-          }
+                ],
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _buildBackgroundButton('White', Colors.white, () => canvasProviderNoListen.changeBackgroundColor(Colors.white), colorScheme, textTheme),
+                  _buildBackgroundButton('Grey', colorScheme.surfaceContainerLow, () => canvasProviderNoListen.changeBackgroundColor(colorScheme.surfaceContainerLow), colorScheme, textTheme),
+                  _buildBackgroundButton('Black', Colors.black, () => canvasProviderNoListen.changeBackgroundColor(Colors.black), colorScheme, textTheme),
+                  _buildBackgroundButton('Red', Colors.red.shade100, () => canvasProviderNoListen.changeBackgroundColor(Colors.red.shade100), colorScheme, textTheme),
+                ],
+              ),
+            ],
+          ),
         ),
 
         const SizedBox(height: 16),
-        Text('Zoom Level:', style: textTheme.titleSmall),
-        Consumer<CanvasProvider>(
-            builder: (context, provider, child) {
-            final String formattedZoom = provider.zoomLevel.toStringAsFixed(1);
-            return Text('${formattedZoom}x', textAlign: TextAlign.center, style: textTheme.bodyLarge);
-            }
+
+        // Background Image Section
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHigh.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.image_rounded, size: 14, color: colorScheme.primary),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Background Image',
+                    style: textTheme.labelMedium?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              FilledButton.tonalIcon(
+                onPressed: () async {
+                  FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.image);
+                  if (result != null && result.files.single.path != null) {
+                    String imagePath = result.files.single.path!;
+                    BoxFit currentFit = canvasProviderNoListen.backgroundFitValue ?? BoxFit.contain;
+                    canvasProviderNoListen.setBackgroundImage(imagePath, currentFit);
+                  }
+                },
+                icon: const Icon(Icons.add_photo_alternate_rounded, size: 18),
+                label: const Text('Set Image'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 36),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Consumer<CanvasProvider>(
+                builder: (context, provider, child) {
+                  return FilledButton.tonalIcon(
+                    onPressed: provider.backgroundImagePathValue != null
+                        ? () => canvasProviderNoListen.setBackgroundImage(null, null)
+                        : null,
+                    icon: const Icon(Icons.clear_rounded, size: 18),
+                    label: const Text('Clear Image'),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 36),
+                      backgroundColor: provider.backgroundImagePathValue != null 
+                          ? colorScheme.errorContainer 
+                          : null,
+                      foregroundColor: provider.backgroundImagePathValue != null 
+                          ? colorScheme.onErrorContainer 
+                          : null,
+                    ),
+                  );
+                },
+              ),
+              Consumer<CanvasProvider>(
+                builder: (context, provider, child) {
+                  if (provider.backgroundImagePathValue != null) {
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: DropdownButtonFormField<BoxFit>(
+                        value: provider.backgroundFitValue ?? BoxFit.contain,
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                          labelText: "Image Fit",
+                          border: const OutlineInputBorder(),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          filled: true,
+                          fillColor: colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                        ),
+                        items: BoxFit.values.map((BoxFit fit) {
+                          return DropdownMenuItem<BoxFit>(
+                            value: fit,
+                            child: Text(fit.name, style: textTheme.bodySmall),
+                          );
+                        }).toList(),
+                        onChanged: (BoxFit? newValue) {
+                          if (newValue != null) {
+                            canvasProviderNoListen.setBackgroundImage(
+                              provider.backgroundImagePathValue!,
+                              newValue,
+                            );
+                          }
+                        },
+                      ),
+                    );
+                  } else {
+                    return const SizedBox.shrink();
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 16),
+
+        // Zoom Level Section
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: colorScheme.surfaceContainerHigh.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: colorScheme.outline.withOpacity(0.2)),
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.zoom_in_rounded, size: 14, color: colorScheme.primary),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Zoom Level',
+                    style: textTheme.labelMedium?.copyWith(
+                      color: colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Consumer<CanvasProvider>(
+                builder: (context, provider, child) {
+                  return Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: colorScheme.primaryContainer.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: colorScheme.primary.withOpacity(0.2)),
+                    ),
+                    child: Text(
+                      '${provider.zoomLevel.toStringAsFixed(1)}x',
+                      textAlign: TextAlign.center,
+                      style: textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.primary,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
         ),
       ],
+    );
+  }
+
+  Widget _buildBackgroundButton(String label, Color color, VoidCallback onPressed, ColorScheme colorScheme, TextTheme textTheme) {
+    return Expanded(
+      child: FilledButton.tonal(
+        onPressed: onPressed,
+        style: FilledButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          backgroundColor: color.withOpacity(0.2),
+          foregroundColor: color.computeLuminance() > 0.5 ? Colors.black87 : Colors.white,
+        ),
+        child: Text(
+          label,
+          style: textTheme.bodySmall?.copyWith(fontSize: 10),
+          textAlign: TextAlign.center,
+        ),
+      ),
     );
   }
 }

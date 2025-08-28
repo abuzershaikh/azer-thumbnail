@@ -85,9 +85,9 @@ class LeftToolbar extends StatelessWidget {
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
 
     return Container(
-      width: 200,
-      color: colorScheme.surfaceContainerLow, // Updated background color
-      padding: const EdgeInsets.all(8.0),
+      width: 220, // Increased width for better spacing
+      color: colorScheme.surface, // Use a slightly different background
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 16.0), // Adjust padding
       child: SingleChildScrollView(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.start,
@@ -96,61 +96,57 @@ class LeftToolbar extends StatelessWidget {
             Text(
               'Elements',
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold), // Updated text style
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold), // Bolder title
             ),
-            const SizedBox(height: 12), // Adjusted spacing
+            const SizedBox(height: 16), // Increased spacing
             Tooltip(
               message: 'Add image from file',
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.image),
+              child: FilledButton.tonalIcon( // Changed to FilledButton for a modern look
+                icon: const Icon(Icons.image_outlined), // Use outlined icon
                 label: const Text('Add Image'),
                 onPressed: () => _pickImage(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colorScheme.primaryContainer,
-                  foregroundColor: colorScheme.onPrimaryContainer,
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12), // Add padding to button
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Tooltip(
               message: 'Add text element',
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.text_fields),
+              child: FilledButton.tonalIcon(
+                icon: const Icon(Icons.text_fields_outlined),
                 label: const Text('Add Text'),
                 onPressed: () => _showAddTextDialog(context),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colorScheme.primaryContainer,
-                  foregroundColor: colorScheme.onPrimaryContainer,
+                 style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Tooltip(
               message: 'Add rectangle shape',
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.crop_square), 
+              child: FilledButton.tonalIcon(
+                icon: const Icon(Icons.crop_square_outlined), 
                 label: const Text('Add Rectangle'),
                 onPressed: () {
                   canvasProviderNoListen.addRectangleElement();
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colorScheme.primaryContainer,
-                  foregroundColor: colorScheme.onPrimaryContainer,
+                 style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Tooltip(
               message: 'Add circle shape',
-              child: ElevatedButton.icon(
+              child: FilledButton.tonalIcon(
                 icon: const Icon(Icons.circle_outlined), 
                 label: const Text('Add Circle'),
                 onPressed: () {
                   canvasProviderNoListen.addCircleElement();
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: colorScheme.primaryContainer,
-                  foregroundColor: colorScheme.onPrimaryContainer,
+                 style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
             ),

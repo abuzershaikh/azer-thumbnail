@@ -266,8 +266,8 @@ class _HomeScreenState extends State<HomeScreen> {
           if (details.pointerCount > 1 || (details.scale - 1.0).abs() > 0.01 || details.rotation.abs() > 0.01) {
             provider.scaleAndRotateElement(details);
           } else if (details.pointerCount == 1) {
-            Offset panDelta = details.focalPointDelta / currentCanvasZoom;
-            setState(() => element.position += panDelta);
+            final panDelta = details.focalPointDelta / currentCanvasZoom;
+            provider.updateElementPosition(panDelta);
           }
         },
         onScaleEnd: (details) {
@@ -613,41 +613,46 @@ class _HomeScreenState extends State<HomeScreen> {
     final canvasProvider = Provider.of<CanvasProvider>(context);
     double currentCanvasZoom = canvasProvider.zoomLevel;
 
+    final ColorScheme colorScheme = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('YouTube Thumbnail Maker'),
-        backgroundColor: Colors.redAccent,
+        title: const Text('Thumbnail Maker'),
+        backgroundColor: colorScheme.surfaceContainerHighest, // Use a theme-aware color
         actions: [
-          Consumer<CanvasProvider>(builder: (context, provider, child) => IconButton(icon: const Icon(Icons.undo), tooltip: 'Undo', onPressed: provider.canUndo ? provider.undo : null)),
-          Consumer<CanvasProvider>(builder: (context, provider, child) => IconButton(icon: const Icon(Icons.redo), tooltip: 'Redo', onPressed: provider.canRedo ? provider.redo : null)),
-          IconButton(icon: const Icon(Icons.folder_open), tooltip: 'Load Project', onPressed: _loadProject),
-          IconButton(icon: const Icon(Icons.save), tooltip: 'Save Project', onPressed: _saveProject),
-          IconButton(icon: const Icon(Icons.save_alt), tooltip: 'Export as PNG', onPressed: _exportCanvasAsPng),
-          IconButton(icon: const Icon(Icons.zoom_out), tooltip: 'Zoom Out', onPressed: () {
+          Consumer<CanvasProvider>(builder: (context, provider, child) => IconButton(icon: const Icon(Icons.undo_rounded), tooltip: 'Undo', onPressed: provider.canUndo ? provider.undo : null)),
+          Consumer<CanvasProvider>(builder: (context, provider, child) => IconButton(icon: const Icon(Icons.redo_rounded), tooltip: 'Redo', onPressed: provider.canRedo ? provider.redo : null)),
+          const VerticalDivider(width: 20, thickness: 1, indent: 12, endIndent: 12),
+          IconButton(icon: const Icon(Icons.folder_open_rounded), tooltip: 'Load Project', onPressed: _loadProject),
+          IconButton(icon: const Icon(Icons.save_rounded), tooltip: 'Save Project', onPressed: _saveProject),
+          IconButton(icon: const Icon(Icons.ios_share_rounded), tooltip: 'Export as PNG', onPressed: _exportCanvasAsPng),
+          const VerticalDivider(width: 20, thickness: 1, indent: 12, endIndent: 12),
+          IconButton(icon: const Icon(Icons.zoom_out_rounded), tooltip: 'Zoom Out', onPressed: () {
               const double scaleFactor = 1.2;
               final currentZoomVal = _transformationController.value.getMaxScaleOnAxis();
               double newScale = (currentZoomVal / scaleFactor).clamp(0.05, 10.0);
               _transformationController.value = Matrix4.identity()..scale(newScale);
             },
           ),
-          IconButton(icon: const Icon(Icons.zoom_in), tooltip: 'Zoom In', onPressed: () {
+          IconButton(icon: const Icon(Icons.zoom_in_rounded), tooltip: 'Zoom In', onPressed: () {
               const double scaleFactor = 1.2;
               final currentZoomVal = _transformationController.value.getMaxScaleOnAxis();
               double newScale = (currentZoomVal * scaleFactor).clamp(0.05, 10.0);
               _transformationController.value = Matrix4.identity()..scale(newScale);
             },
           ),
+          const SizedBox(width: 8),
         ],
       ),
-      body: Column( // New Column
+      body: Column(
         children: [
-          Expanded( // Existing Row content is now the first child of Column, wrapped in Expanded
+          Expanded(
             child: Row(
               children: [
                 const LeftToolbar(),
                 Expanded(
                   child: Container(
-                    color: Colors.grey[800],
+                    color: colorScheme.surfaceContainerLow, // Use a theme-aware background
                     child: InteractiveViewer(
                       transformationController: _transformationController,
                       constrained: false,
